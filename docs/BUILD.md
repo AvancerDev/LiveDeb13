@@ -403,34 +403,6 @@ Scaricare l’ISO (artifact `livedeb13-amd64-<branch>`):
   L’`<ARTIFACT_ID>` si legge dall’interfaccia web (URL dell’artifact) o con
   `gh api repos/AvancerDev/LiveDeb13/actions/runs/<RUN_ID>/artifacts`.
 
-### 7.1 Download interrotto (`connection reset by peer`)
-
-Su linee instabili l’artifact da ~1,5 GB si interrompe a metà:
-
-```
-error downloading livedeb13-amd64-…: error writing zip archive:
-read tcp 10.0.0.5:50148->57.150.87.97:443: read: connection reset by peer
-```
-
-Non è un problema del progetto né dell’ISO: `gh run download` non riprende da
-dove si era fermato. Usa lo script del progetto, che riprende con `curl -C -`:
-
-```bash
-./fetch-iso.sh                       # ultima run verde → ISO nella cwd
-./fetch-iso.sh 45041861620 ~/Downloads
-make fetch-iso RUN=45041861620 DIR=~/Downloads
-```
-
-Fa: individua run e artifact, scarica a pezzi con ripresa automatica (fino a
-`ATTEMPTS=40` tentativi), verifica lo zip con `unzip -t`, lo estrae e stampa
-`ls -lh` + `sha256sum`. Se anche così si interrompe, **rilancia lo stesso
-comando**: riparte dai byte già presenti. Opzioni: `ATTEMPTS=… SLEEP=… REPO=…`.
-
-Se fallisce sempre allo stesso punto, prova in ordine: cavo Ethernet invece del
-Wi-Fi, VPN/proxy disattivati, un’altra rete (hotspot del telefono), browser al
-posto di `curl`. In alternativa evita del tutto il download: ricompila in
-locale con `./build-docker.sh`.
-
 In caso di errore, il workflow commenta automaticamente la PR con le ultime
 200 righe di `build.log`, così la diagnosi non richiede di scaricare nulla.
 Per rilasciare una versione:
