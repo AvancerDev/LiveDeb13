@@ -14,6 +14,9 @@ binary/
 *.buildlog
 build.log
 
+# Lock di live-build (lb <stage> crea .lock nella radice del progetto)
+/.lock
+
 # Cache e temporanei
 *.tmp
 *~

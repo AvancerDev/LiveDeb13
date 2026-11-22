@@ -398,6 +398,33 @@ Da questa versione `./build-docker.sh` restituisce `config/`, `chroot/`,
 `binary/`, `.build/` e `cache/` al tuo utente **anche quando la build
 fallisce**, così il problema non si ripresenta.
 
+### 6.8 `E: lb bootstrap_cache already locked`
+
+```
+[2026-11-22 18:40:12] lb bootstrap_cache restore
+P: Restoring bootstrap stage from cache...
+E: lb bootstrap_cache already locked
+E: An unexpected failure occurred, exiting...
+```
+
+Ogni stadio di live-build prende un lock creando il file **`.lock`** nella
+directory di build (la radice del progetto) e lo cancella all’uscita. Se la
+build viene interrotta bruscamente — Ctrl-C, container ucciso, terminale
+chiuso, crash — il file resta lì e **tutte** le build successive si fermano
+subito, prima di fare qualsiasi cosa.
+
+Rimedio (2 secondi, non riscarica nulla):
+
+```bash
+cd ~/LiveDeb13
+rm -f .lock
+./build-docker.sh --reset
+```
+
+Da questa versione `./build-docker.sh` rimuove da solo un `.lock` orfano
+all’avvio e non ne lascia dietro se la build fallisce; `.lock` è in
+`.gitignore`.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

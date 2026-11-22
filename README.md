@@ -224,6 +224,13 @@ sovrascrivi `APT_OPTIONS`: aggiorna con `git pull`. Se fallisce ancora,
 `grep -n 'Y/n\|Abort\|unexpected failure' build.log` e allegalo per l’analisi.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.6.
 
+**`E: lb bootstrap_cache already locked`?**
+Lock rimasto da una build interrotta (Ctrl-C, container ucciso): è il file
+`.lock` nella radice del progetto. Rimedio immediato:
+`rm -f .lock && ./build-docker.sh --reset` — non riscarica nulla. Da questa
+versione `build-docker.sh` lo rimuove da sé. Dettagli:
+[`docs/BUILD.md`](docs/BUILD.md) §6.8.
+
 **`error: unable to create file config/…: Permesso negato`?**
 I file generati da `lb config` sono di proprietà di `root` (build lanciata con
 `sudo`): `git` non può aggiornarli. Rimedio una volta sola:

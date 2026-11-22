@@ -114,6 +114,17 @@ apt_install() {
 }
 '
 
+# --- Lock orfano di live-build ----------------------------------------------
+# `lb <stage>` crea un file `.lock` nella directory di build (qui: la radice del
+# progetto) e lo rimuove solo se il processo esce "pulito". Dopo un Ctrl-C, un
+# container ucciso o un crash resta lì e ogni build successiva muore con:
+#   E: lb bootstrap_cache already locked
+#   E: An unexpected failure occurred, exiting...
+if [ -e .lock ]; then
+  echo "==> Rimosso lock orfano .lock (build precedente interrotta)"
+  rm -f .lock 2>/dev/null || ${SUDO} rm -f .lock
+fi
+
 # --- Reset veloce (chroot/binary sporchi, cache dei .deb conservata) ---------
 if [ "$RESET" = "1" ]; then
   echo "==> Reset veloce: rimuovo chroot/, binary/ e .build/ (cache/ conservata)"
@@ -121,6 +132,7 @@ if [ "$RESET" = "1" ]; then
   if ! rm -rf chroot binary .build 2>/dev/null; then
     ${SUDO} rm -rf chroot binary .build
   fi
+  rm -f .lock 2>/dev/null || ${SUDO} rm -f .lock
 fi
 
 # --- Pulizia preventiva ------------------------------------------------------
@@ -182,6 +194,8 @@ if [ "$RC" -ne 0 ]; then
     [ -e "$_d" ] || continue
     ${SUDO} chown -R "$HOST_UID:$HOST_GID" "$_d" 2>/dev/null || true
   done
+  # nessun lock deve sopravvivere a una build fallita
+  ${SUDO} rm -f .lock 2>/dev/null || rm -f .lock 2>/dev/null || true
 
   echo
   echo "ERRORE: build fallita (exit $RC). Log completo salvato in: build.log" >&2
