@@ -46,7 +46,22 @@ jobs:
           lb config --dump | grep -E "LB_(DISTRIBUTION|ARCHITECTURE|IMAGE_NAME|IMAGE_TYPE|SECURITY|DEBIAN_INSTALLER|MIRROR_BINARY)=" | sort || true
 
       - name: Build ISO
-        run: ./auto/build
+        run: |
+          set -o pipefail
+          ./auto/build 2>&1 | tee build.log
+
+      - name: Mostra errore (annotazioni)
+        if: failure()
+        run: |
+          # Le annotazioni ::error:: sono leggibili via API (check-runs/annotations)
+          # anche quando i log completi non sono accessibili: aiutano la diagnosi.
+          echo "----- tail di build.log -----"
+          tail -n 25 build.log 2>/dev/null || true
+          if [ -f build.log ]; then
+            grep -nE "^(E:|Err:|W:)|error|Error|Errore|unable|Unable|failed|Failed" build.log | tail -n 15 |               while IFS= read -r line; do
+                echo "::error title=build.log::$line"
+              done
+          fi
 
       - name: Show ISO info
         run: |
