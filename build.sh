@@ -42,7 +42,7 @@ fi
 echo "==> Build ISO (lb build)..."
 ./auto/build "$@"
 
-ISO="binary/live/livedeb13-amd64.iso"
+ISO="livedeb13-amd64.hybrid.iso"
 if [ -f "$ISO" ]; then
   echo "==> OK: $ISO ($(du -h "$ISO" | cut -f1))"
 else

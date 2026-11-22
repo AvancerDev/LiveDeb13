@@ -44,8 +44,8 @@ make config
 sudo make build
 # oppure: sudo ./auto/build
 
-# L’ISO si trova in: binary/live/livedeb13-amd64.iso
-ls -lh binary/live/
+# L’ISO si trova nella radice del progetto:
+ls -lh livedeb13-amd64.hybrid.iso
 ```
 
 ### Test rapido in VM (QEMU)
@@ -59,7 +59,7 @@ make run-uefi   # UEFI (richiede OVMF)
 
 ```bash
 # Sostituisci /dev/sdX con la tua chiavetta (ATTENZIONE: cancella tutto!)
-sudo dd if=binary/live/livedeb13-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=livedeb13-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 Oppure con `Ventoy`, `balenaEtcher`, `GNOME Disks`, ecc.
@@ -92,7 +92,8 @@ Tutto si modifica senza toccare `auto/config` (che è solo un wrapper di `lb con
 |---|---|
 | Pacchetti live | `config/package-lists/packages.list.chroot` |
 | Pacchetti installati sul target | `config/package-lists/packages.list.chroot_install` |
-| Hostname, MOTD, sorgenti APT | `config/includes.chroot/etc/` |
+| Hostname, MOTD | `config/includes.chroot/etc/` |
+| Sorgenti APT (sicurezza) | `config/archives/livedeb13-security.list` |
 | Utente live, locale | `config/hooks/live/` |
 | Preseed installer | `config/preseed/preseed.cfg` |
 | Script extra | `config/includes.chroot/usr/local/bin/` |
@@ -116,7 +117,7 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 │   ├── includes.binary/   # File copiati nella ISO (bootloader, splash…)
 │   ├── hooks/             # Script chroot/live eseguiti in build
 │   ├── preseed/           # preseed.cfg per Debian Installer
-│   ├── archives/          # .deb locali opzionali
+│   ├── archives/          # Sorgenti APT extra + .deb locali opzionali
 │   └── bootloaders/       # Config bootloader custom (opzionale)
 ├── docs/
 ├── .github/workflows/     # CI per build automatica ISO
@@ -156,9 +157,18 @@ Aggiungi `xfce4 xfce4-goodies lightdm` a `packages.list.chroot` e rimuovi
 l’autologin console in `config/includes.chroot/etc/systemd/system/getty@tty1.service.d/`.
 Vedi `docs/CUSTOMIZE.md`.
 
+**Build fallisce con “Errore 100” e `trixie/updates Release` non trovato?**
+È il vecchio schema del repository di sicurezza generato da alcune versioni di
+live-build per `trixie`. In questo progetto la riga è fornita esplicitamente da
+`config/archives/livedeb13-security.list` (suite `trixie-security` su
+`security.debian.org/debian-security`) e la generazione automatica è disattivata
+in `auto/config` (`--security false`). Dopo un aggiornamento del progetto:
+`make config && sudo make distclean && sudo make build`.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.1.
+
 **Build fallisce con “lb: command not found”?**
 Installa `live-build` (vedi Requisiti) e ricompila da una directory pulita:
-`make distclean && make config && sudo make build`.
+`sudo make distclean && sudo make build`.
 
 ---
 

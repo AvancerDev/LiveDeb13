@@ -23,13 +23,33 @@ openssh-server
 
 Poi ricompila: `sudo make build`.
 
-## Cambiare hostname / MOTD / sorgenti APT
+## Cambiare hostname / MOTD
 
 ```
 config/includes.chroot/etc/hostname
 config/includes.chroot/etc/motd
-config/includes.chroot/etc/apt/sources.list.d/debian.sources
 ```
+
+## Sorgenti APT (build e sistema live)
+
+I mirror principali si impostano in `auto/config` (`--mirror-bootstrap`,
+`--mirror-chroot`, `--mirror-binary`): live-build genera da sé
+`/etc/apt/sources.list` nel chroot e nel sistema live.
+
+Il repository di **sicurezza** invece è fornito esplicitamente da:
+
+```
+config/archives/livedeb13-security.list
+```
+
+Questo file viene installato come `/etc/apt/sources.list.d/livedeb13-security.list`
+**sia nel chroot di build sia nel sistema live**. In `auto/config` la generazione
+automatica della riga di sicurezza è disattivata (`--security false`), perché per
+`trixie` alcune versioni di live-build producono ancora il vecchio schema
+`trixie/updates` (vedi troubleshooting in `docs/BUILD.md`).
+
+Per cambiare mirror di sicurezza, modifica il file qui sopra (o i parametri
+`--mirror-chroot-security` / `--mirror-binary-security` in `auto/config`).
 
 ## Utente live e password
 

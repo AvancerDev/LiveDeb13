@@ -1,4 +1,13 @@
 #!/bin/sh
 # LiveDeb13 — build dell'ISO (richiede root)
+#
+# Rimuoviamo lo stage file `.build/config` prima di `lb build`: in questo modo
+# live-build riesegue sempre auto/config, quindi ogni modifica alla
+# configurazione (mirror, opzioni, nome immagine...) viene applicata.
+# Senza questa riga `lb build` salterebbe `auto/config` se `.build/config`
+# esiste già (tipico errore: "ho cambiato auto/config ma la build è identica").
 set -e
-lb build noauto "$@"
+
+rm -f .build/config
+
+exec lb build noauto "$@"

@@ -1,8 +1,28 @@
-Questa directory può contenere .deb locali opzionali.
-I pacchetti qui dentro vengono aggiunti al repository locale di live-build.
+Questa directory contiene sorgenti APT aggiuntive e .deb locali opzionali.
+
+## Sorgenti APT
+
+`livedeb13-security.list` fornisce il repository di sicurezza Debian 13:
+
+    deb http://security.debian.org/debian-security/ trixie-security main contrib non-free non-free-firmware
+
+live-build installa i file `*.list` di questa directory come
+`/etc/apt/sources.list.d/<nome>.list` **sia nel chroot di build sia nel sistema
+live**. In `auto/config` la riga di sicurezza generata automaticamente è
+disattivata (`--security false`) perché per `trixie` alcune versioni di
+live-build usano ancora il vecchio schema `<dist>/updates`, che non esiste su
+security.debian.org (errore `Release file` + exit 100).
+
+Suffissi:
+- `.list` / `.conf` / `.pref`       → usati in build **e** nel sistema live
+- `.list.chroot` / `.conf.chroot`   → solo nel chroot di build
+- `.list.binary`                    → solo nell'immagine finale
+
+## Pacchetti locali (.deb)
 
 Per aggiungere un pacchetto:
-  cp mio-pacchetto.deb config/archives/
-  # poi aggiungilo a config/package-lists/packages.list.chroot
+
+    cp mio-pacchetto.deb config/archives/
+    # poi aggiungilo a config/package-lists/packages.list.chroot
 
 Vedi: https://wiki.debian.org/Live/Build/Customization#Local_packages

@@ -6,14 +6,11 @@
 live-boot
 live-config
 live-tools
-live-config-user-setup
-live-config-sudo
 
 # --- Init & kernel ---
 systemd
 systemd-sysv
 linux-image-amd64
-linux-headers-amd64
 
 # --- Firmware & microcode ---
 firmware-linux
@@ -26,6 +23,8 @@ intel-microcode
 amd64-microcode
 
 # --- Bootloader & installer ---
+# NOTA: il Debian Installer non si installa come pacchetto nel chroot:
+# live-build lo scarica dal mirror (--debian-installer live).
 grub-efi-amd64-bin
 grub-efi-amd64-signed
 grub-pc-bin
@@ -35,8 +34,6 @@ syslinux
 isolinux
 extlinux
 memtest86+
-debian-installer
-debian-installer-utils
 os-prober
 efibootmgr
 

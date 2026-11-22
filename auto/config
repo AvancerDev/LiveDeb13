@@ -11,6 +11,22 @@
 #   - config/includes.chroot/etc/hostname
 #   - config/hooks/ (locale, utente)
 #   - config/preseed/preseed.cfg (installer)
+#
+# NOTA APT / security (trixie):
+#   live-build genera da sé le righe di /etc/apt/sources.list a partire dai
+#   mirror impostati. Per la distribuzione "trixie" alcune versioni di
+#   live-build usano ancora il vecchio schema Debian (<dist>/updates) per il
+#   repository di sicurezza, producendo una riga non valida del tipo
+#       deb http://security.debian.org/ trixie/updates main
+#   che fa fallire 'apt update' con:
+#       E: The repository 'http://security.debian.org trixie/updates Release'
+#          does not have a Release file.
+#   Per evitarlo disattiviamo la generazione automatica (--security false) e
+#   forniamo noi il repository corretto tramite
+#       config/archives/livedeb13-security.list
+#   (usato sia nel chroot di build sia nel sistema live).
+#   Riferimento: Debian 13 usa deb.debian.org/debian per trixie/trixie-updates
+#   e security.debian.org/debian-security per la suite trixie-security.
 set -e
 
 lb config noauto \
@@ -20,7 +36,8 @@ lb config noauto \
   --mirror-bootstrap http://deb.debian.org/debian/ \
   --mirror-chroot http://deb.debian.org/debian/ \
   --mirror-binary http://deb.debian.org/debian/ \
-  --mirror-binary-security http://security.debian.org/ \
+  --mirror-chroot-security http://security.debian.org/debian-security/ \
+  --mirror-binary-security http://security.debian.org/debian-security/ \
   --mirror-debian-installer http://deb.debian.org/debian/ \
   --architecture amd64 \
   --mode debian \
@@ -31,6 +48,7 @@ lb config noauto \
   --initramfs live-boot \
   --compression xz \
   --binary-image iso-hybrid \
+  --image-name livedeb13 \
   --iso-volume "LiveDeb13" \
   --iso-application "Debian 13 Live Installer" \
   --iso-publisher "LiveDeb13" \
@@ -40,8 +58,9 @@ lb config noauto \
   --memtest memtest86+ \
   --firmware-chroot true \
   --firmware-binary true \
-  --security true \
+  --security false \
   --backports false \
+  --apt-source-archives false \
   --apt-indices true \
   --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30" \
   --keyring-packages debian-archive-keyring \

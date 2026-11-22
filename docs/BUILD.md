@@ -23,8 +23,10 @@ make config
 # equivale a: ./auto/config
 ```
 
-Questo genera la directory `config/` a partire da `auto/config`.
-Se modifichi `auto/config`, riesegui `make config` (o `lb config`).
+Questo rigenera i file di configurazione di live-build a partire da
+`auto/config`. `sudo make build` riesegue comunque sempre `auto/config`
+(`auto/build` rimuove lo stage file `.build/config`), quindi le modifiche
+alla configurazione sono sempre applicate.
 
 ## 3. Build
 
@@ -34,7 +36,7 @@ sudo make build
 ```
 
 - Durata tipica: 10–30 minuti (dipende da rete/CPU).
-- Output: `binary/live/livedeb13-amd64.iso`
+- Output: `livedeb13-amd64.hybrid.iso` (nella radice del progetto)
 - Log: `*.build.log` nella root del progetto.
 
 Pulizia:
@@ -61,14 +63,14 @@ make run-uefi
 Test manuale con QEMU (esempio):
 
 ```bash
-qemu-system-x86_64 -m 2048 -cdrom binary/live/livedeb13-amd64.iso -boot d -enable-kvm
+qemu-system-x86_64 -m 2048 -cdrom livedeb13-amd64.hybrid.iso -boot d -enable-kvm
 ```
 
 ## 5. Scrittura su USB
 
 ```bash
 # ATTENZIONE: sostituisci /dev/sdX con la chiavetta corretta!
-sudo dd if=binary/live/livedeb13-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=livedeb13-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 Oppure:
@@ -87,8 +89,52 @@ Verifica la chiavetta con `lsblk` prima di scrivere.
 | `debootstrap` fallisce / rete | Controlla la connessione e i mirror in `auto/config` |
 | `xorriso` non trovato | Installa `xorriso` |
 | ISO non si avvia in UEFI | Disattiva Secure Boot oppure verifica OVMF; usa `make run-uefi` |
-| Build sporca / errori strani | `sudo make distclean && make config && sudo make build` |
+| Build sporca / errori strani | `sudo make distclean && sudo make build` |
 | Pacchetto non trovato | Verifica nome in trixie e componenti in `auto/config` (`--archive-areas`) |
+| `E: The repository 'http://security.debian.org trixie/updates Release' does not have a Release file` | Vedi §6.1 |
+
+### 6.1 Errore 100 — repository `trixie/updates` senza Release file
+
+Sintomo (durante `apt update` nel chroot):
+
+```
+E: The repository 'http://security.debian.org trixie/updates Release' does not have a Release file.
+N: Updating from such a repository can't be done securely, and is therefore disabled by default.
+make: *** [Makefile:17: build] Errore 100
+```
+
+Causa: per la suite `trixie` il repository di sicurezza è
+**`http://security.debian.org/debian-security` con suite `trixie-security`**
+(mentre `trixie-updates` sta su `deb.debian.org/debian`). Alcune versioni di
+live-build generano invece la vecchia riga `${dist}/updates`, che non esiste e
+fa fallire `apt update` (exit 100).
+
+Soluzione già applicata in questo progetto:
+
+1. `auto/config` usa `--security false` (live-build non genera più quella riga)
+   e i mirror di sicurezza corretti
+   (`--mirror-chroot-security`/`--mirror-binary-security` →
+   `http://security.debian.org/debian-security/`);
+2. il repository corretto è fornito da `config/archives/livedeb13-security.list`
+   (usato nel chroot di build **e** nel sistema live).
+
+Dopo aver aggiornato il progetto è **obbligatorio** rigenerare la configurazione
+e ripulire gli artefatti della build fallita:
+
+```bash
+make config                 # rigenera config/ da auto/config
+sudo make distclean         # lb clean --purge (rimuove chroot/, cache/, .build/)
+sudo make build
+```
+
+Se vuoi verificare cosa genera live-build, controlla:
+
+```bash
+cat chroot/etc/apt/sources.list
+ls chroot/etc/apt/sources.list.d/
+```
+
+non devono comparire suite tipo `trixie/updates`.
 
 ## 7. Build in CI
 
