@@ -354,7 +354,24 @@ sudo make build
 
 ## 7. Build in CI
 
-Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`.
+Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`
+(container `--privileged`, live-build 20250505+deb13u1). Ogni PR esegue la build:
+l’ISO compare come **artifact** della run.
+
+Scaricare l'artifact:
+
+- **interfaccia web**: PR (o Actions) → run → sezione *Artifacts* →
+  `livedeb13-amd64-<branch>.zip`
+- **da terminale** (con `gh`):
+
+  ```bash
+  gh run list --limit 5
+  gh run download <RUN_ID> -n livedeb13-amd64-arena-e324deaa-livedeb13
+  unzip livedeb13-amd64-arena-e324deaa-livedeb13.zip
+  ```
+
+In caso di errore, il workflow commenta automaticamente la PR con le ultime
+200 righe di `build.log`, così la diagnosi non richiede di scaricare nulla.
 Per rilasciare una versione:
 
 ```bash
