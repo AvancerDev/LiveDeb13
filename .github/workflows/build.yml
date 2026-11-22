@@ -26,6 +26,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Nome artifact (senza '/')
+        run: |
+          suffix="$(printf '%s' '${{ github.head_ref || github.ref_name }}' | tr '/' '-')"
+          echo "ART_SUFFIX=${suffix}" >> "$GITHUB_ENV"
+          echo "Artifact: livedeb13-amd64-${suffix}"
+
       - name: Spazio disco disponibile
         run: df -h / | sed 's/^/  /'
 
@@ -54,13 +60,18 @@ jobs:
         if: failure()
         run: |
           # Le annotazioni ::error:: sono leggibili via API (check-runs/annotations)
-          # anche quando i log completi non sono accessibili: aiutano la diagnosi.
-          echo "----- tail di build.log -----"
-          tail -n 25 build.log 2>/dev/null || true
+          # anche quando i log completi non sono scaricabili.
           if [ -f build.log ]; then
-            grep -nE "^(E:|Err:|W:)|error|Error|Errore|unable|Unable|failed|Failed" build.log | tail -n 15 |               while IFS= read -r line; do
+            echo "----- ultime 40 righe di build.log -----"
+            tail -n 40 build.log
+            tail -n 40 build.log | while IFS= read -r line; do
+              line="$(printf '%s' "$line" | cut -c1-350)"
+              if [ -n "$line" ]; then
                 echo "::error title=build.log::$line"
-              done
+              fi
+            done
+          else
+            echo "::error title=build.log::build.log non creato"
           fi
 
       - name: Show ISO info
@@ -71,7 +82,7 @@ jobs:
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
-          name: livedeb13-amd64-${{ github.head_ref || github.ref_name }}
+          name: livedeb13-amd64-${{ env.ART_SUFFIX }}
           path: ${{ env.ISO_NAME }}
           retention-days: 30
           compression-level: 0
@@ -81,8 +92,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log-${{ github.head_ref || github.ref_name }}
+          name: build-log-${{ env.ART_SUFFIX }}
           path: |
+            build.log
             *.log
             *.build.log
           retention-days: 7
