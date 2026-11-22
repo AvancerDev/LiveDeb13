@@ -1,0 +1,8 @@
+Questa directory può contenere .deb locali opzionali.
+I pacchetti qui dentro vengono aggiunti al repository locale di live-build.
+
+Per aggiungere un pacchetto:
+  cp mio-pacchetto.deb config/archives/
+  # poi aggiungilo a config/package-lists/packages.list.chroot
+
+Vedi: https://wiki.debian.org/Live/Build/Customization#Local_packages

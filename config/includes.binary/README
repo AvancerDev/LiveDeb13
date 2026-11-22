@@ -1,0 +1,5 @@
+Questa directory viene copiata nella root dell'ISO (binary/).
+Usala per file extra del bootloader (splash, icone, isolinux.cfg custom…).
+
+Per personalizzare il menu di avvio, vedi anche config/bootloaders/.
+Per impostazione predefinita live-build genera i menu automaticamente.

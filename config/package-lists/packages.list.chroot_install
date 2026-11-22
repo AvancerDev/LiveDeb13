@@ -1,0 +1,75 @@
+# LiveDeb13 — pacchetti installati sul sistema TARGET (dopo Debian Installer)
+# Questi pacchetti vengono installati sul disco di destinazione.
+# Mantenerli minimali: solo console, niente desktop.
+
+# --- Kernel & bootloader (target) ---
+linux-image-amd64
+grub-efi-amd64-bin
+grub-efi-amd64-signed
+grub-pc-bin
+grub2-common
+shim-signed
+os-prober
+efibootmgr
+
+# --- Firmware & microcode (target) ---
+firmware-linux
+firmware-linux-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+intel-microcode
+amd64-microcode
+
+# --- Base system (target) ---
+systemd
+systemd-sysv
+base-files
+bash
+bash-completion
+coreutils
+sudo
+ca-certificates
+locales
+console-setup
+keyboard-configuration
+tzdata
+less
+man-db
+nano
+vim-tiny
+curl
+wget
+htop
+tmux
+openssh-server
+openssh-client
+rsync
+tree
+file
+psmisc
+procps
+iproute2
+iputils-ping
+dnsutils
+net-tools
+pciutils
+usbutils
+smartmontools
+hdparm
+nvme-cli
+parted
+gptfdisk
+dosfstools
+exfatprogs
+btrfs-progs
+xfsprogs
+ntfs-3g
+cryptsetup
+lvm2
+mdadm
+tasksel
+network-manager
+iwd
+wpasupplicant
+wireless-regdb

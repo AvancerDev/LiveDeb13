@@ -1,0 +1,8 @@
+Benvenuto su LiveDeb13 — Debian 13 (trixie) Minimal Live + Installer
+=====================================================================
+
+Utente live:  user / live   (sudo senza password)
+Installer:    esegui `livedeb13-install` oppure scegli "Install" dal menu di avvio
+Info sistema: `livedeb13-info`
+
+Documentazione: https://wiki.debian.org/  |  Progetto: LiveDeb13

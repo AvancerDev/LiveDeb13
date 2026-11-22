@@ -1,0 +1,18 @@
+#!/bin/sh
+# Crea l'utente live 'user' con sudo senza password (se non esiste già)
+# live-config crea già un utente, questo hook garantisce password e gruppi.
+set -eu
+
+if ! id user >/dev/null 2>&1; then
+  useradd -m -s /bin/bash -G sudo,adm user
+fi
+
+echo "user:live" | chpasswd
+echo "root:live" | chpasswd
+
+# Sudo senza password per l'utente live
+echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/010-user-nopasswd
+chmod 440 /etc/sudoers.d/010-user-nopasswd
+
+# Autologin console su tty1 (già configurato via includes.chroot)
+mkdir -p /etc/systemd/system/getty@tty1.service.d

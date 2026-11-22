@@ -1,0 +1,53 @@
+name: Build LiveDeb13 ISO
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+      options: --privileged
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            live-build debootstrap squashfs-tools xorriso isolinux \
+            syslinux-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools \
+            ca-certificates sudo
+
+      - name: Configure
+        run: ./auto/config
+
+      - name: Build ISO
+        run: ./auto/build
+
+      - name: Show ISO info
+        run: |
+          ls -lh binary/live/
+          sha256sum binary/live/*.iso || true
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: livedeb13-amd64-${{ github.ref_name }}
+          path: binary/live/*.iso
+          retention-days: 30
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.ref_name }}
+          path: "*.build.log"
+          retention-days: 7
+          if-no-files-found: ignore

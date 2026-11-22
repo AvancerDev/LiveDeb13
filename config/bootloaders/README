@@ -1,0 +1,9 @@
+Config bootloader custom (opzionale).
+Per impostazione predefinita live-build usa i template di Debian.
+
+Per personalizzare:
+  config/bootloaders/isolinux/isolinux.cfg
+  config/bootloaders/grub-efi/grub.cfg
+  config/bootloaders/grub-pc/grub.cfg
+
+Vedi: https://wiki.debian.org/Live/Build/Customization#Bootloaders

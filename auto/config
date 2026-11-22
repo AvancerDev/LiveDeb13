@@ -1,0 +1,61 @@
+#!/bin/sh
+# LiveDeb13 — configurazione live-build per Debian 13 (trixie) amd64
+# Vedi: https://wiki.debian.org/Live/Build/GettingStarted
+#       https://manpages.debian.org/trixie/live-build/lb-config.1.en.html
+set -e
+
+lb config noauto \
+  --distribution trixie \
+  --parent-distribution trixie \
+  --archive-areas "main contrib non-free non-free-firmware" \
+  --mirror-bootstrap http://deb.debian.org/debian/ \
+  --mirror-chroot http://deb.debian.org/debian/ \
+  --mirror-binary http://deb.debian.org/debian/ \
+  --mirror-binary-security http://security.debian.org/ \
+  --mirror-debian-installer http://deb.debian.org/debian/ \
+  --architecture amd64 \
+  --mode debian \
+  --system live \
+  --init-system systemd \
+  --bootloaders "syslinux,grub-efi,grub-pc" \
+  --linux-packages linux-image \
+  --linux-flavours amd64 \
+  --kernel-squashfs true \
+  --initramfs auto \
+  --compression xz \
+  --image-type iso-hybrid \
+  --iso-volume "LiveDeb13" \
+  --iso-application "Debian 13 Live Installer" \
+  --iso-publisher "LiveDeb13" \
+  --debian-installer live \
+  --debian-installer-distribution trixie \
+  --debian-installer-gui false \
+  --memtest memtest86+ \
+  --firmware-chroot true \
+  --firmware-binary true \
+  --security true \
+  --updates true \
+  --backports false \
+  --apt-indices true \
+  --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30" \
+  --keyring-packages debian-archive-keyring \
+  --hostname livedeb13 \
+  --username user \
+  --user-fullname "Live User" \
+  --user-password live \
+  --root-password live \
+  --locale it_IT.UTF-8 \
+  --keyboard-layout it \
+  --timezone Europe/Rome \
+  --language it \
+  --apt-update true \
+  --apt-install true \
+  --cache true \
+  --chroot-filesystem squashfs \
+  --union-file-system overlay \
+  --iso-hybrid true \
+  --binary-filesystem fat32 \
+  --binary-images iso-hybrid \
+  --debootstrap-options "--variant=minbase --components=main,contrib,non-free,non-free-firmware --include=ca-certificates" \
+  --debootstrap-script debian \
+  "$@"

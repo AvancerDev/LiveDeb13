@@ -1,0 +1,9 @@
+#!/bin/sh
+# Imposta locale italiano e fuso orario Europe/Rome
+set -eu
+sed -i 's/^# *it_IT.UTF-8 UTF-8/it_IT.UTF-8 UTF-8/' /etc/locale.gen
+sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+locale-gen it_IT.UTF-8 en_US.UTF-8
+update-locale LANG=it_IT.UTF-8
+ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
+echo "Europe/Rome" > /etc/timezone

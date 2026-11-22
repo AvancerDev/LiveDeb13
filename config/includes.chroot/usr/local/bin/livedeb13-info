@@ -1,0 +1,16 @@
+#!/bin/sh
+# LiveDeb13 — mostra informazioni sul sistema live
+set -eu
+echo "=== LiveDeb13 — Debian 13 (trixie) Minimal ==="
+echo "Hostname:  $(hostname)"
+echo "Kernel:    $(uname -r)"
+echo "Arch:      $(uname -m)"
+echo "OS:        $(cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"')"
+echo "Memoria:   $(free -h | awk '/Mem:/ {print $2}')"
+echo "Disco:     $(df -h / | awk 'NR==2 {print $4\" liberi su \"$2}')"
+echo "Utente:    $(whoami)"
+echo ""
+echo "Comandi utili:"
+echo "  livedeb13-install   Avvia Debian Installer"
+echo "  sudo apt update     Aggiorna i pacchetti (live)"
+echo "  lsblk               Dischi e partizioni"

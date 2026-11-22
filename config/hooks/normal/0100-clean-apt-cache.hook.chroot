@@ -1,0 +1,10 @@
+#!/bin/sh
+# Pulizia cache APT per ridurre la dimensione dell'ISO
+set -eu
+rm -rf /var/lib/apt/lists/*
+rm -rf /var/cache/apt/archives/*.deb
+rm -rf /var/cache/apt/archives/partial/*
+rm -rf /var/log/apt/*
+rm -rf /var/log/dpkg.log
+rm -rf /tmp/*
+rm -rf /var/tmp/*

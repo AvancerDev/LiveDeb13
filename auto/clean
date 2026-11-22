@@ -1,0 +1,4 @@
+#!/bin/sh
+# LiveDeb13 — pulizia artefatti di build
+set -e
+lb clean noauto "$@"

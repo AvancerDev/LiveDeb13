@@ -1,0 +1,25 @@
+# Artefatti live-build (generati da `lb build`)
+.build/
+chroot/
+binary/
+*.iso
+*.img
+*.tar
+*.tar.gz
+*.squashfs
+*.rootfs
+*.manifest
+*.packages
+*.build.log
+*.buildlog
+
+# Cache e temporanei
+*.tmp
+*~
+*.swp
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace

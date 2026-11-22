@@ -1,0 +1,13 @@
+#!/bin/sh
+# LiveDeb13 — scorciatoia per avviare Debian Installer dal live
+set -eu
+echo "Avvio Debian Installer (modalità testuale)..."
+echo "Se l'installer non parte, usa il menu di avvio: 'Install'."
+if command -v debian-installer >/dev/null 2>&1; then
+  exec sudo debian-installer "$@"
+elif [ -x /usr/lib/debian-installer/launcher ]; then
+  exec sudo /usr/lib/debian-installer/launcher "$@"
+else
+  echo "ERRORE: debian-installer non trovato. Riavvia e scegli 'Install' dal menu."
+  exit 1
+fi

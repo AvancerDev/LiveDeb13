@@ -1,0 +1,4 @@
+#!/bin/sh
+# LiveDeb13 — build dell'ISO (richiede root)
+set -e
+lb build noauto "$@"
