@@ -129,6 +129,7 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 ├── .github/workflows/     # CI per build automatica ISO
 ├── Makefile
 ├── build.sh
+├── fetch-iso.sh          # scarica l'ISO dalla CI con resume
 └── README.md
 ```
 
@@ -200,6 +201,17 @@ ls -lh livedeb13-amd64.hybrid.iso
 
 Dall’interfaccia web invece si scarica uno `.zip` da estrarre a mano.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §7.
+
+**Il download dell’ISO si interrompe: `read: connection reset by peer`?**
+Su linee instabili 1,5 GB possono saltare a metà e `gh` non riprende. Usa
+`./fetch-iso.sh` (o `make fetch-iso`), che riprende dai byte già scaricati:
+
+```bash
+./fetch-iso.sh 45041861620 ~/Downloads
+```
+
+Se si interrompe di nuovo, rilancia lo stesso comando. Dettagli:
+[`docs/BUILD.md`](docs/BUILD.md) §7.1.
 
 **`Do you want to continue? [Y/n] Abort.`?**
 `--apt-options` in `auto/config` deve contenere `--yes` (sostituisce il default di
