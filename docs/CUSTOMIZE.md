@@ -46,7 +46,12 @@ config/includes.chroot/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
 ## Locale, tastiera, fuso orario
 
-- Build-time: flag in `auto/config` (`--locale`, `--keyboard-layout`, `--timezone`)
+In live-build 4.x (trixie) le opzioni `--locale`, `--keyboard-layout`,
+`--timezone`, `--hostname`, `--username` sono state rimosse da `lb config`.
+Si impostano con:
+
+- Boot-time: `--bootappend-live` in `auto/config`
+  (`hostname=`, `username=`, `locales=`, `keyboard-layouts=`, `timezone=`)
 - Runtime: `config/hooks/normal/0200-set-locale.hook.chroot`
 - Installer: `config/preseed/preseed.cfg`
 

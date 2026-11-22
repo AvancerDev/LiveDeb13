@@ -1,7 +1,16 @@
 #!/bin/sh
 # LiveDeb13 — configurazione live-build per Debian 13 (trixie) amd64
+# Compatibile con live-build 4.x (trixie 20250505+deb13u1, testing 20250814)
 # Vedi: https://wiki.debian.org/Live/Build/GettingStarted
-#       https://manpages.debian.org/trixie/live-build/lb-config.1.en.html
+#       https://manpages.debian.org/trixie/live-build/lb_config.1.en.html
+#
+# NOTA: in live-build 4.x le opzioni --hostname, --username, --locale,
+# --keyboard-layout, --timezone, --language, --user-password, --root-password
+# sono state RIMOSSE. Hostname/utente/locale si impostano con:
+#   - --bootappend-live (parametri kernel live-config)
+#   - config/includes.chroot/etc/hostname
+#   - config/hooks/ (locale, utente)
+#   - config/preseed/preseed.cfg (installer)
 set -e
 
 lb config noauto \
@@ -16,14 +25,12 @@ lb config noauto \
   --architecture amd64 \
   --mode debian \
   --system live \
-  --init-system systemd \
-  --bootloaders "syslinux,grub-efi,grub-pc" \
+  --initsystem systemd \
   --linux-packages linux-image \
   --linux-flavours amd64 \
-  --kernel-squashfs true \
-  --initramfs auto \
+  --initramfs live-boot \
   --compression xz \
-  --image-type iso-hybrid \
+  --binary-image iso-hybrid \
   --iso-volume "LiveDeb13" \
   --iso-application "Debian 13 Live Installer" \
   --iso-publisher "LiveDeb13" \
@@ -34,28 +41,12 @@ lb config noauto \
   --firmware-chroot true \
   --firmware-binary true \
   --security true \
-  --updates true \
   --backports false \
   --apt-indices true \
   --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30" \
   --keyring-packages debian-archive-keyring \
-  --hostname livedeb13 \
-  --username user \
-  --user-fullname "Live User" \
-  --user-password live \
-  --root-password live \
-  --locale it_IT.UTF-8 \
-  --keyboard-layout it \
-  --timezone Europe/Rome \
-  --language it \
-  --apt-update true \
-  --apt-install true \
   --cache true \
   --chroot-filesystem squashfs \
-  --union-file-system overlay \
-  --iso-hybrid true \
   --binary-filesystem fat32 \
-  --binary-images iso-hybrid \
-  --debootstrap-options "--variant=minbase --components=main,contrib,non-free,non-free-firmware --include=ca-certificates" \
-  --debootstrap-script debian \
+  --bootappend-live "boot=live components hostname=livedeb13 username=user user-fullname=Live_User locales=it_IT.UTF-8 keyboard-layouts=it timezone=Europe/Rome" \
   "$@"
