@@ -224,6 +224,12 @@ sovrascrivi `APT_OPTIONS`: aggiorna con `git pull`. Se fallisce ancora,
 `grep -n 'Y/n\|Abort\|unexpected failure' build.log` e allegalo per l’analisi.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.6.
 
+**`error: unable to create file config/…: Permesso negato`?**
+I file generati da `lb config` sono di proprietà di `root` (build lanciata con
+`sudo`): `git` non può aggiornarli. Rimedio una volta sola:
+`sudo chown -R "$USER:$USER" .` poi `git reset --hard origin/<branch>`.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.7.
+
 **`E: Unable to locate package …`?**
 Un nome nella lista pacchetti non esiste in Debian (spesso è il nome Ubuntu:
 `gptfdisk` → `gdisk`). Se il tuo albero è aggiornato questo non può più

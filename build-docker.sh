@@ -165,7 +165,10 @@ ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
     # shellcheck disable=SC2086
     ./auto/build \${LB_ARGS:-}
 
-    chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary 2>/dev/null || true
+    # `lb config` scrive file generati DENTRO config/: senza questo chown
+    # l'albero resterebbe di root e git (utente) non potrebbe più aggiornarlo
+    # ("error: unable to create file config/...: Permesso negato").
+    chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary config 2>/dev/null || true
     chown \"\${HOST_UID}:\${HOST_GID}\" ./*.iso 2>/dev/null || true
   " 2>&1 | tee build.log
 RC=${PIPESTATUS[0]}
@@ -173,6 +176,13 @@ set -e
 
 # --- Diagnosi in caso di fallimento -----------------------------------------
 if [ "$RC" -ne 0 ]; then
+  # anche una build fallita lascia chroot/, config/ ecc. di proprietà di root:
+  # li restituiamo all'utente, altrimenti git e le build successive si bloccano
+  for _d in .build cache chroot binary config; do
+    [ -e "$_d" ] || continue
+    ${SUDO} chown -R "$HOST_UID:$HOST_GID" "$_d" 2>/dev/null || true
+  done
+
   echo
   echo "ERRORE: build fallita (exit $RC). Log completo salvato in: build.log" >&2
   echo "--- ultime 30 righe di build.log ---" >&2

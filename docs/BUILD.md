@@ -374,6 +374,30 @@ sudo rm -rf chroot binary cache .build
 sudo make build
 ```
 
+### 6.7 `error: unable to create file config/…: Permesso negato` (git bloccato)
+
+```
+error: unable to create file config/hooks/normal/0200-set-locale.hook.chroot: Permesso negato
+fatal: Impossibile ripristinare il file indice alla revisione 'origin/…'
+```
+
+`lb config` scrive file generati **dentro `config/`**. Se la build è stata
+lanciata con `sudo make build` (o se il container ha scritto come root), quei
+file diventano di proprietà di `root`: poi `git` — che gira come te — non può
+più sostituirli, e anche le build successive si bloccano.
+
+Rimedio (una volta sola, dalla radice del progetto):
+
+```bash
+sudo chown -R "$USER:$USER" .          # oppure: sudo chown -R "$USER:$USER" config
+git fetch origin
+git reset --hard origin/arena/e324deaa-livedeb13
+```
+
+Da questa versione `./build-docker.sh` restituisce `config/`, `chroot/`,
+`binary/`, `.build/` e `cache/` al tuo utente **anche quando la build
+fallisce**, così il problema non si ripresenta.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`
