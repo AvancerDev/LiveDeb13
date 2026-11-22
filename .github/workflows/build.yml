@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 # Se pushi di nuovo sulla stessa branch, annulla la run precedente
@@ -77,6 +77,19 @@ jobs:
           else
             echo "::error title=build.log::build.log non creato"
           fi
+
+      - name: Pubblica build.log sul branch ci-log (se fallisce)
+        if: failure()
+        run: |
+          if [ ! -f build.log ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp build.log /tmp/build-ci.log
+          git checkout -q -B ci-log
+          cp /tmp/build-ci.log ci-build.log
+          git add -f ci-build.log
+          git commit -q -m "CI: log build $(date -u +%FT%TZ)" || true
+          git push -f -q origin ci-log
 
       - name: Commenta il log sulla PR (se fallisce)
         if: failure() && github.event_name == 'pull_request'
