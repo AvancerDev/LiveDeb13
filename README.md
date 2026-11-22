@@ -185,6 +185,22 @@ In alternativa compila la ISO con GitHub Actions (Actions → Build LiveDeb13 IS
 → Run workflow) oppure installa la live-build di Debian sull'host.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3 e §8.
 
+**Non riesco a scaricare l’ISO dalla CI (`fatal: .git non è un repository Git`
+oppure `unzip: cannot find …zip`)?**
+`gh run download` va lanciato **dentro il repo** (oppure con
+`-R AvancerDev/LiveDeb13`): fuori da Git non sa quale repository interrogare.
+Inoltre scarica **ed estrae** l’artifact, quindi lo `unzip` non serve — con `-n`
+l’ISO finisce nella directory corrente:
+
+```bash
+cd ~/LiveDeb13
+gh run download 45041861620 -n livedeb13-amd64-arena-e324deaa-livedeb13
+ls -lh livedeb13-amd64.hybrid.iso
+```
+
+Dall’interfaccia web invece si scarica uno `.zip` da estrarre a mano.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §7.
+
 **`Do you want to continue? [Y/n] Abort.`?**
 `--apt-options` in `auto/config` deve contenere `--yes` (sostituisce il default di
 live-build). Già corretto nel progetto: aggiorna con `git pull`.

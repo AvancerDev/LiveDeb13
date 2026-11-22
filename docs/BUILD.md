@@ -358,17 +358,50 @@ Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`
 (container `--privileged`, live-build 20250505+deb13u1). Ogni PR esegue la build:
 l’ISO compare come **artifact** della run.
 
-Scaricare l'artifact:
+Scaricare l’ISO (artifact `livedeb13-amd64-<branch>`):
 
-- **interfaccia web**: PR (o Actions) → run → sezione *Artifacts* →
-  `livedeb13-amd64-<branch>.zip`
-- **da terminale** (con `gh`):
+- **interfaccia web**: PR (o Actions) → run → sezione *Artifacts* → clic sul
+  nome dell’artifact. Si scarica uno `.zip`: va estratto (dentro c’è
+  `livedeb13-amd64.hybrid.iso`).
+- **da terminale** (con `gh`, consigliato): `gh run download` scarica **ed
+  estrae** l’artifact, quindi **non serve `unzip`**. Con `-n` (un solo
+  artifact) i file finiscono nella directory corrente:
 
   ```bash
-  gh run list --limit 5
+  cd ~/LiveDeb13                       # dentro il repo, altrimenti errore
+  gh run list --limit 5                # trova il <RUN_ID> verde
   gh run download <RUN_ID> -n livedeb13-amd64-arena-e324deaa-livedeb13
-  unzip livedeb13-amd64-arena-e324deaa-livedeb13.zip
+  ls -lh livedeb13-amd64.hybrid.iso    # ~1.5 GB
+  sha256sum livedeb13-amd64.hybrid.iso
   ```
+
+  Se non sei dentro il repo (`fatal: .git non è un repository Git`), indica il
+  repository esplicitamente:
+
+  ```bash
+  gh run download <RUN_ID> -R AvancerDev/LiveDeb13 \
+     -n livedeb13-amd64-arena-e324deaa-livedeb13 -D ~/Downloads
+  ```
+
+  `-D`/`--dir` esiste da `gh` 2.28: con versioni più vecchie fai `cd` nella
+  directory di destinazione e ometti `-D`.
+
+  Nome dell’artifact per ogni branch (controllalo in *Artifacts*, il suffisso
+  cambia): `livedeb13-amd64-${branch con '/' → '-'}`; su `main` e sui tag è
+  `livedeb13-amd64-main` / `livedeb13-amd64-v1.0.0`.
+
+- **senza `gh`, via API** (richiede un token GitHub):
+
+  ```bash
+  gh auth token > token.txt        # oppure un PAT con scope repo
+  curl -L -H "Authorization: token $(cat token.txt)" \
+    -o iso.zip \
+    https://api.github.com/repos/AvancerDev/LiveDeb13/actions/artifacts/<ARTIFACT_ID>/zip
+  unzip iso.zip
+  ```
+
+  L’`<ARTIFACT_ID>` si legge dall’interfaccia web (URL dell’artifact) o con
+  `gh api repos/AvancerDev/LiveDeb13/actions/runs/<RUN_ID>/artifacts`.
 
 In caso di errore, il workflow commenta automaticamente la PR con le ultime
 200 righe di `build.log`, così la diagnosi non richiede di scaricare nulla.
