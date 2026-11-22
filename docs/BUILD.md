@@ -335,7 +335,19 @@ E: An unexpected failure occurred, exiting...
 ```
 
 Uno dei nomi in `config/package-lists/` non esiste in Debian (spesso è un nome
-**di Ubuntu**, diverso da quello Debian). Esempi tipici:
+**di Ubuntu**, diverso da quello Debian).
+
+Da questa versione `auto/config` controlla i nomi noti come errati **prima** di
+iniziare (10 ms invece di 15 minuti) e si ferma con la correzione pronta:
+
+```
+ERRORE: nomi di pacchetto che non esistono in Debian 13 (trixie):
+  config/package-lists/packages.list.chroot: gptfdisk  ->  gdisk
+```
+
+Il controllo copre i casi visti finora (vedi tabella); per una verifica
+completa e aggiornata serve `./check-packages.sh` (usa un container). Esempi
+tipici:
 
 | Nome errato (Ubuntu) | Nome corretto in Debian 13 |
 |---|---|

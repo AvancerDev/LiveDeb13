@@ -38,6 +38,43 @@ set -e
 
 cd "$(dirname "$0")/.."
 
+# --- Versione del progetto (utile per capire se l'albero è aggiornato) -------
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  printf 'LiveDeb13: %s [%s]\n' \
+    "$(git log -1 --format='%h %s' 2>/dev/null || echo '?')" \
+    "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+fi
+
+# --- Controllo nomi pacchetto noti come errati (fail fast, offline) ----------
+# Un nome sbagliato fa fallire la build dopo 10-20 minuti, in fondo al pass di
+# installazione ("E: Unable to locate package ..."). Qui lo si intercetta in
+# 10 ms, prima di iniziare, con la correzione già pronta.
+BAD_PKGS=""
+for _plist in config/package-lists/*.list*; do
+  [ -f "${_plist}" ] || continue
+  while IFS= read -r _pkg; do
+    case "${_pkg}" in
+      gptfdisk)                 BAD_PKGS="${BAD_PKGS}\n  ${_plist}: gptfdisk  ->  gdisk" ;;
+      dnsutils)                 BAD_PKGS="${BAD_PKGS}\n  ${_plist}: dnsutils  ->  bind9-dnsutils" ;;
+      debian-installer-utils)   BAD_PKGS="${BAD_PKGS}\n  ${_plist}: debian-installer-utils  ->  rimuovi (non esiste in Debian)" ;;
+      live-config-user-setup)   BAD_PKGS="${BAD_PKGS}\n  ${_plist}: live-config-user-setup  ->  rimuovi (usa un hook)" ;;
+      live-config-sudo)         BAD_PKGS="${BAD_PKGS}\n  ${_plist}: live-config-sudo  ->  rimuovi (usa sudo + /etc/sudoers.d)" ;;
+    esac
+  done < <(sed -e 's/#.*//' "${_plist}" | tr -d '[:blank:]' | grep -v '^$')
+done
+if [ -n "${BAD_PKGS}" ]; then
+  {
+    echo
+    echo "ERRORE: nomi di pacchetto che non esistono in Debian 13 (trixie):"
+    printf '%b\n' "${BAD_PKGS}"
+    echo
+    echo "Sono nomi di Ubuntu o pacchetti rimossi: correggi il file indicato e"
+    echo "rilancia. Verifica completa (richiede docker/podman): ./check-packages.sh"
+    echo
+  } >&2
+  exit 1
+fi
+
 # --- Controllo versione live-build -------------------------------------------
 # live-build 2.x/3.x (es. "3.0~a57", epoca Debian 7/8) NON può costruire
 # immagini Debian 13: usa ancora aufs, --force-yes, sorgenti APT vecchio stile
