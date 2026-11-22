@@ -105,6 +105,68 @@ Assicurati che siano eseguibili:
 chmod +x config/includes.chroot/usr/local/bin/mio-script
 ```
 
+## Banner fastfetch all’accesso
+
+Il pacchetto `fastfetch` è incluso (in `packages.list.chroot` e
+`packages.list.chroot_install`) e all’accesso sulla console viene mostrato un
+banner con logo Debian e info di sistema.
+
+| Cosa | File |
+|---|---|
+| Configurazione (moduli, ordine, righe custom) | `config/includes.chroot/etc/fastfetch/config.jsonc` |
+| Script che lo lancia al login | `config/includes.chroot/etc/profile.d/00-livedeb13-welcome.sh` |
+
+Personalizzare i moduli: modifica l’array `modules` nel `.jsonc`. Per esempio
+per aggiungere la temperatura o togliere i colori finali:
+
+```jsonc
+"modules": ["title", "os", "kernel", "uptime", "cpu", "gpu", "cputemp", "memory"]
+```
+
+Elenco completo dei moduli: <https://github.com/fastfetch-cli/fastfetch/wiki/Configuration>.
+
+Comportamento dello script di welcome:
+
+- si attiva solo su **shell interattiva con terminale** (tty1 in autologin,
+  `login`, `ssh`), mai per script, `scp`, cron o comandi non interattivi;
+- una sola volta per sessione;
+- disattivazione al volo: `export LIVEDEB13_NO_WELCOME=1`
+  (per disattivarlo sempre aggiungi quella riga a
+  `config/includes.chroot/etc/profile.d/`);
+- se la configurazione desse problemi, ricade su `fastfetch` senza opzioni.
+
+Per vedere il banner senza riavviare: `fastfetch` oppure
+`fastfetch --config /etc/fastfetch/config.jsonc`.
+
+## Crediti: comando `made by`
+
+Nel live sono disponibili:
+
+```bash
+made by      # creatore (AvancerDev) + progetto (LiveDeb13)
+made         # identico
+made-by      # identico (nome senza spazio, comodo negli script)
+```
+
+`made by` funziona perché `made` è un piccolo comando in `/usr/local/bin/made`
+che interpreta `by` come argomento: funziona in bash, dash, zsh, `ssh`, `sudo`
+e anche incollata in uno script — non è un alias di shell.
+
+I valori stampati vengono da un unico file:
+
+```sh
+# config/includes.chroot/etc/livedeb13-release  →  /etc/livedeb13-release
+LIVEDEB13_PROJECT="LiveDeb13"
+LIVEDEB13_CREATOR="AvancerDev"
+LIVEDEB13_URL="https://github.com/AvancerDev/LiveDeb13"
+LIVEDEB13_TAGLINE="Debian 13 (trixie) — live + installer"
+LIVEDEB13_VERSION="1.0"
+```
+
+Per cambiare nome, URL o versione modifica quel file (e bumpa
+`LIVEDEB13_VERSION` a ogni tag `vX.Y.Z`). Rispetta `NO_COLOR=1` e non usa
+colori quando l’output è rediretto in un file o in una pipe.
+
 ## Pacchetti .deb locali
 
 ```

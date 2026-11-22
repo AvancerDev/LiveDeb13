@@ -1,0 +1,20 @@
+#!/bin/sh
+# made — scorciatoia per i crediti del progetto.
+#
+#   made by    →  mostra creatore (AvancerDev) e progetto (LiveDeb13)
+#   made       →  idem
+#
+# Implementato come comando (e non come alias) perché `made by` con lo spazio
+# arriva qui come $1="by": funziona in bash, dash, zsh, ssh e via sudo.
+
+set -eu
+
+case "${1:-by}" in
+    by|BY|By|bY|credits|--credits)
+        exec made-by
+        ;;
+    *)
+        printf 'Uso: made by\n' >&2
+        exit 1
+        ;;
+esac

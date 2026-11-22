@@ -94,6 +94,11 @@ iwd
 wpasupplicant
 wireless-regdb
 
+# --- Info di sistema / branding ---
+# fastfetch: banner con logo e info di sistema all'accesso (vedi
+# config/includes.chroot/etc/profile.d/00-livedeb13-welcome.sh)
+fastfetch
+
 # --- Utilità live / rescue ---
 # Nomi dei pacchetti come in Debian (non Ubuntu): gdisk (non gptfdisk),
 # bind9-dnsutils (non dnsutils). Niente GUI (gparted) né clonezilla

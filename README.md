@@ -85,6 +85,8 @@ Oppure con `Ventoy`, `balenaEtcher`, `GNOME Disks`, ecc.
 | Rete | NetworkManager + iwd + wpasupplicant (Wi-Fi e Ethernet) |
 | Firmware | `firmware-linux`, microcode Intel/AMD |
 | Tools | `nano`, `vim-tiny`, `htop`, `tmux`, `curl`, `wget`, `openssh-server`, `mc`, `parted`, `cryptsetup`, `lvm2`, … |
+| Banner | `fastfetch` con logo e info di sistema, mostrato all’accesso |
+| Crediti | comando `made by` → creatore (`AvancerDev`) e progetto (`LiveDeb13`) |
 
 Vedi `config/package-lists/` per l’elenco completo e modificabile.
 
@@ -103,6 +105,8 @@ Tutto si modifica senza toccare `auto/config` (che è solo un wrapper di `lb con
 | Utente live, locale | `config/hooks/live/` |
 | Preseed installer | `config/preseed/preseed.cfg` |
 | Script extra | `config/includes.chroot/usr/local/bin/` |
+| Banner `fastfetch` | `config/includes.chroot/etc/fastfetch/config.jsonc` |
+| Crediti `made by` | `config/includes.chroot/etc/livedeb13-release` |
 
 Guida completa: [`docs/CUSTOMIZE.md`](docs/CUSTOMIZE.md) ·
 Build & test: [`docs/BUILD.md`](docs/BUILD.md)
@@ -120,6 +124,10 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 ├── config/
 │   ├── package-lists/     # Elenchi pacchetti (.chroot / .chroot_install)
 │   ├── includes.chroot/   # File copiati nel live system
+│   │   ├── etc/fastfetch/          # banner fastfetch
+│   │   ├── etc/livedeb13-release   # credito/versione (comando `made by`)
+│   │   ├── etc/profile.d/          # welcome all'accesso
+│   │   └── usr/local/bin/          # made, made-by, livedeb13-*
 │   ├── includes.binary/   # File copiati nella ISO (bootloader, splash…)
 │   ├── hooks/             # Script chroot/live eseguiti in build
 │   ├── preseed/           # preseed.cfg per Debian Installer

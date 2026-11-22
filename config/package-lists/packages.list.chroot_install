@@ -41,6 +41,7 @@ nano
 vim-tiny
 curl
 wget
+fastfetch
 htop
 tmux
 openssh-server
