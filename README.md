@@ -185,6 +185,11 @@ In alternativa compila la ISO con GitHub Actions (Actions → Build LiveDeb13 IS
 → Run workflow) oppure installa la live-build di Debian sull'host.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3 e §8.
 
+**`E: Unable to locate package …`?**
+Un nome nella lista pacchetti non esiste in Debian (spesso è il nome Ubuntu:
+`gptfdisk` → `gdisk`). Verifica tutta la lista in 30 s con `make check-packages`
+(usa un container Debian 13). Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.5.
+
 **`Temporary failure resolving 'deb.debian.org'`?**
 È la rete/DNS della macchina che compila, non la configurazione. In container:
 `./build-docker.sh --net-host` (o `--dns 1.1.1.1`). Su rete lenta alza i

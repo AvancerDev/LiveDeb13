@@ -22,6 +22,7 @@ intel-microcode
 amd64-microcode
 
 # --- Base system (target) ---
+# Nomi Debian (non Ubuntu): gdisk, bind9-dnsutils.
 systemd
 systemd-sysv
 base-files
@@ -51,7 +52,7 @@ psmisc
 procps
 iproute2
 iputils-ping
-dnsutils
+bind9-dnsutils
 net-tools
 pciutils
 usbutils
@@ -59,7 +60,7 @@ smartmontools
 hdparm
 nvme-cli
 parted
-gptfdisk
+gdisk
 dosfstools
 exfatprogs
 btrfs-progs

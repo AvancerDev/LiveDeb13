@@ -67,7 +67,7 @@ psmisc
 procps
 iproute2
 iputils-ping
-dnsutils
+bind9-dnsutils
 net-tools
 strace
 lsof
@@ -77,7 +77,7 @@ smartmontools
 hdparm
 nvme-cli
 parted
-gptfdisk
+gdisk
 dosfstools
 exfatprogs
 btrfs-progs
@@ -95,10 +95,11 @@ wpasupplicant
 wireless-regdb
 
 # --- Utilità live / rescue ---
-gparted
+# Nomi dei pacchetti come in Debian (non Ubuntu): gdisk (non gptfdisk),
+# bind9-dnsutils (non dnsutils). Niente GUI (gparted) né clonezilla
+# (server edition, trascina drbl/python3): la live è solo console.
 testdisk
 gddrescue
-clonezilla
 partclone
 squashfs-tools
 xorriso

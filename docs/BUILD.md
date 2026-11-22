@@ -108,6 +108,7 @@ Verifica la chiavetta con `lsblk` prima di scrivere.
 | ISO non si avvia in UEFI | Disattiva Secure Boot oppure verifica OVMF; usa `make run-uefi` |
 | Build sporca / errori strani | `sudo make distclean && sudo make build` |
 | Pacchetto non trovato | Verifica nome in trixie e componenti in `auto/config` (`--archive-areas`) |
+| `E: Unable to locate package …` | Vedi §6.5: nome Debian ≠ nome Ubuntu; usa `make check-packages` |
 | `Temporary failure resolving 'deb.debian.org'` | Vedi §6.4 (DNS/rete: `--net-host`, `--dns`, mirror alternativo) |
 | `gzip: stdin: unexpected end of file` / `Errore 1` generico | Vedi §6.2 (pulizia totale, `CACHE=false`, mirror alternativo, `make debug`) |
 | `lb config: opzione non riconosciuta "--xxx"` | `auto/config` filtra le opzioni non supportate; se l'errore compare, aggiorna il progetto (`git pull`) e riporta l'output di `lb --version` |
@@ -287,6 +288,42 @@ Rimedi:
 
 - **Connessione molto lenta**: valuta la build su GitHub Actions (§8.2), che
   scarica tutto dai server GitHub/Debian e ti restituisce solo la ISO.
+
+### 6.5 `E: Unable to locate package <nome>`
+
+```
+P: Begin installing packages (live pass)...
+E: Unable to locate package gptfdisk
+E: An unexpected failure occurred, exiting...
+```
+
+Uno dei nomi in `config/package-lists/` non esiste in Debian (spesso è un nome
+**di Ubuntu**, diverso da quello Debian). Esempi tipici:
+
+| Nome errato (Ubuntu) | Nome corretto in Debian 13 |
+|---|---|
+| `gptfdisk` | `gdisk` |
+| `dnsutils` (virtuale) | `bind9-dnsutils` |
+| pacchetti grafici (`gparted`) | non servono in una live solo console |
+
+Controlla **tutta** la lista in pochi secondi, senza avviare una build:
+
+```bash
+./check-packages.sh        # oppure: make check-packages
+```
+
+Lo script usa un container `debian:trixie`, abilita
+`main contrib non-free non-free-firmware` e segnala ogni nome mancante.
+In alternativa verifica a mano su `https://packages.debian.org/trixie/<nome>`.
+
+Corretto il nome, rilancia:
+
+```bash
+git pull
+sudo make distclean
+sudo rm -rf chroot binary cache .build
+sudo make build
+```
 
 ## 7. Build in CI
 
