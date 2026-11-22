@@ -7,6 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 # Se pushi di nuovo sulla stessa branch, annulla la run precedente
 concurrency:
   group: iso-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
@@ -41,7 +45,7 @@ jobs:
           apt-get install -y --no-install-recommends \
             live-build debootstrap squashfs-tools xorriso isolinux \
             syslinux-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools \
-            cpio zstd xz-utils file rsync ca-certificates wget
+            cpio zstd xz-utils file rsync ca-certificates wget gh
           lb --version
 
       - name: Configure
@@ -73,6 +77,23 @@ jobs:
           else
             echo "::error title=build.log::build.log non creato"
           fi
+
+      - name: Commenta il log sulla PR (se fallisce)
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f build.log ]; then
+            exit 0
+          fi
+          {
+            echo "### ❌ Build fallita — ultime 150 righe di \`build.log\`"
+            echo
+            echo '```'
+            tail -n 150 build.log
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md || true
 
       - name: Show ISO info
         run: |
