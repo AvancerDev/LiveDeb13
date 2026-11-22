@@ -134,7 +134,11 @@ ARGS=(
   --backports false
   --apt-source-archives false
   --apt-indices true
-  --apt-options "${APT_OPTIONS:---option Acquire::Retries=5 --option Acquire::http::Timeout=120}"
+  # ATTENZIONE: --apt-options SOSTITUISCE il default di live-build ("--yes");
+  # senza --yes apt chiede conferma (es. alla rimozione dei pacchetti
+  # temporanei come dctrl-tools) e la build abortisce con
+  # "Do you want to continue? [Y/n] Abort." + "E: An unexpected failure".
+  --apt-options "${APT_OPTIONS:---yes --option Acquire::Retries=5 --option Acquire::http::Timeout=120}"
   --keyring-packages debian-archive-keyring
   --cache "${CACHE:-true}"
   --chroot-filesystem squashfs

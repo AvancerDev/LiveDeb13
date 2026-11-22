@@ -108,6 +108,7 @@ Verifica la chiavetta con `lsblk` prima di scrivere.
 | ISO non si avvia in UEFI | Disattiva Secure Boot oppure verifica OVMF; usa `make run-uefi` |
 | Build sporca / errori strani | `sudo make distclean && sudo make build` |
 | Pacchetto non trovato | Verifica nome in trixie e componenti in `auto/config` (`--archive-areas`) |
+| `Do you want to continue? [Y/n] Abort.` | Manca `--yes` in `--apt-options` (vedi §6.6) |
 | `E: Unable to locate package …` | Vedi §6.5: nome Debian ≠ nome Ubuntu; usa `make check-packages` |
 | `Temporary failure resolving 'deb.debian.org'` | Vedi §6.4 (DNS/rete: `--net-host`, `--dns`, mirror alternativo) |
 | `gzip: stdin: unexpected end of file` / `Errore 1` generico | Vedi §6.2 (pulizia totale, `CACHE=false`, mirror alternativo, `make debug`) |
@@ -288,6 +289,32 @@ Rimedi:
 
 - **Connessione molto lenta**: valuta la build su GitHub Actions (§8.2), che
   scarica tutto dai server GitHub/Debian e ti restituisce solo la ISO.
+
+### 6.6 `Do you want to continue? [Y/n] Abort.` + `E: An unexpected failure occurred`
+
+```
+The following packages will be REMOVED:
+  dctrl-tools*
+Do you want to continue? [Y/n] Abort.
+E: An unexpected failure occurred, exiting...
+```
+
+Causa: l'opzione `--apt-options` di `auto/config` **sostituisce** il valore
+predefinito di live-build, che contiene `--yes`. Senza `--yes`, apt chiede
+conferma quando live-build rimuove i pacchetti temporanei (es. `dctrl-tools`)
+e, non essendo interattivo, abortisce.
+
+Rimedio: `--apt-options` deve **sempre** iniziare con `--yes` (o `-y`):
+
+```bash
+--apt-options "--yes --option Acquire::Retries=5 --option Acquire::http::Timeout=120"
+```
+
+Lo stesso vale se la sovrascrivi da ambiente:
+
+```bash
+sudo env APT_OPTIONS="--yes --option Acquire::Retries=10 --option Acquire::http::Timeout=300" make build
+```
 
 ### 6.5 `E: Unable to locate package <nome>`
 
