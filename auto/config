@@ -49,23 +49,36 @@ case "${LB_VERSION_NOVERSION}" in
   2.*|3.*)
     cat >&2 <<'AVVISO'
 
-ERRORE: la live-build installata e' troppo vecchia (serie 2.x/3.x, epoca
-        Debian 7/8): non e' in grado di costruire un'immagine Debian 13
-        (usa ancora aufs, --force-yes, sorgenti APT vecchio stile).
+ERRORE: la live-build installata e' troppo vecchia per costruire Debian 13.
 
-Serve live-build di trixie (1:20250505+deb13u1 o successiva). Per sistemare:
+  Versione rilevata: serie 2.x/3.x (epoca Debian 7/8: aufs, --force-yes,
+  opzioni --image-name/--bootloaders/--updates assenti).
+  Tipico di Ubuntu, che impacchetta live-build 3.0~a57-1ubuntuXX, e delle
+  installazioni manuali in /usr/local/bin.
 
-  which lb                      # se e' /usr/local/bin/lb e' installata a mano
-  sudo apt purge live-build
-  sudo rm -f /usr/local/bin/lb /usr/local/sbin/lb
-  sudo apt update
-  sudo apt install live-build
-  hash -r
-  lb --version                  # deve mostrare 20250... e NON 3.0~a57
+Tre modi per risolvere (consigliato il primo):
 
-Se 'apt-cache policy live-build' propone ancora la 3.0~a57, la tua
-/etc/apt/sources.list punta a una release Debian vecchia: correggila prima
-di continuare (deve puntare a trixie).
+A) Build in un container Debian 13 (non tocca il sistema host, ambiente
+   identico alla CI). Serve docker o podman:
+
+     ./build-docker.sh          # oppure: make docker
+     # con pulizia preventiva: ./build-docker.sh --clean
+
+B) Build su GitHub Actions (nessuna installazione locale):
+   tab "Actions" -> "Build LiveDeb13 ISO" -> "Run workflow" sulla tua branch,
+   poi scarica l'artifact "livedeb13-amd64-<branch>" (contiene la ISO).
+
+C) Installare la live-build di Debian sul sistema (Ubuntu: miscela non
+   supportata, ma e' solo shell + debootstrap):
+
+     sudo apt purge live-build
+     cd /tmp
+     wget http://deb.debian.org/debian/pool/main/l/live-build/live-build_20250505+deb13u1_all.deb
+     sudo apt install ./live-build_20250505+deb13u1_all.deb
+     hash -r
+     lb --version               # deve mostrare 20250505+deb13u1
+
+Dettagli: docs/BUILD.md sezioni 1, 6.3 e 8.
 
 AVVISO
     echo "Versione rilevata: ${LB_VERSION_LINE}"

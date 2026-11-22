@@ -150,47 +150,6 @@ Se dopo `make build` il problema si ripresenta, allega l'output di
 `lb --version` e di `lb config --help | head -40`: serve a capire quali
 opzioni supporta la tua live-build.
 
-### 6.3 `lb --version` = `3.0~a57` (live-build troppo vecchia)
-
-Sintomo: `lb config` rifiuta opzioni (`--image-name`, `--bootloaders`,
-`--updates`, …), la build si ferma in `lb_chroot_linux-image` con
-`gzip: stdin: unexpected end of file`, e nel log compaiono variabili
-d'epoca Debian 7/8:
-
-```
-LB_CONFIG_VERSION='3.0~a57'
-LB_UNION_FILESYSTEM='aufs'
-W: --force-yes is deprecated
-```
-
-Causa: è installata una live-build 2.x/3.x (Debian 7/8), ad esempio perché
-`lb` è stato installato a mano in `/usr/local/bin` o perché l'host usa
-sorgenti APT di una release vecchia. **live-build 3.x non è compatibile con
-Debian 13**: va sostituita.
-
-Rimedio:
-
-```bash
-which lb                      # se è /usr/local/bin/lb → installata a mano
-sudo apt purge live-build
-sudo rm -f /usr/local/bin/lb /usr/local/sbin/lb
-sudo apt update
-sudo apt install live-build
-hash -r
-lb --version                  # deve mostrare 20250... e NON 3.0~a57
-
-sudo make distclean
-sudo rm -rf chroot binary cache .build
-sudo make build
-```
-
-Se `apt-cache policy live-build` continua a proporre la `3.0~a57`, controlla
-le sorgenti APT dell'host (`/etc/apt/sources.list`, `/etc/apt/sources.list.d/`):
-devono puntare a `trixie`, non a release vecchie.
-
-`auto/config` e `make check` verificano la versione e si fermano con un
-messaggio esplicito se rilevano la serie 2.x/3.x.
-
 ### 6.2 Altri errori generici (`Errore 1`, `gzip: stdin: unexpected end of file`)
 
 Sintomo tipico: la build si interrompe con `make: *** Errore 1` e, poco prima,
@@ -252,6 +211,35 @@ ls chroot/etc/apt/sources.list.d/
 
 non devono comparire suite tipo `trixie/updates`.
 
+### 6.3 `lb --version` = `3.0~a57` (live-build troppo vecchia — tipico di Ubuntu)
+
+Sintomo: `lb config` rifiuta opzioni (`--image-name`, `--bootloaders`,
+`--updates`, …), la build si ferma (spesso in `lb_chroot_linux-image`) con
+`gzip: stdin: unexpected end of file`, e nel log compaiono variabili d'epoca
+Debian 7/8:
+
+```
+LB_CONFIG_VERSION='3.0~a57'
+LB_UNION_FILESYSTEM='aufs'
+W: --force-yes is deprecated
+```
+
+Causa: **Ubuntu impacchetta una live-build ferma al 2013**
+(`3.0~a57-1ubuntuXX`) e non ne esiste una versione moderna nei repo Ubuntu.
+Quella versione non può costruire Debian 13, in nessun modo.
+
+Rimedio: usa un ambiente Debian 13 — vedi **§8** (container `debian:trixie`,
+GitHub Actions, o installazione della live-build di Debian). Poi:
+
+```bash
+sudo make distclean           # o: ./build-docker.sh --clean
+sudo rm -rf chroot binary cache .build
+sudo make build               # oppure: ./build-docker.sh
+```
+
+`auto/config` e `make check` verificano la versione e si fermano subito con un
+messaggio esplicito se rilevano la serie 2.x/3.x, senza sprecare una build.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`.
@@ -261,3 +249,62 @@ Per rilasciare una versione:
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+## 8. Host non Debian (Ubuntu, Fedora, …) — usare un container Debian 13
+
+live-build deve girare su **Debian 13**: su Ubuntu il pacchetto è la
+`3.0~a57` del 2013 (vedi §6.3) e la build non può funzionare. Tre strade:
+
+### 8.1 Container Debian 13 (consigliata)
+
+```bash
+sudo apt install docker.io        # oppure: sudo apt install podman
+./build-docker.sh                 # alias: make docker
+./build-docker.sh --clean         # con pulizia preventiva
+RUNTIME=podman ./build-docker.sh  # se preferisci podman
+```
+
+Lo script:
+
+- avvia `debian:trixie` con `--privileged` (serve per chroot e mount);
+- monta la cartella del progetto in `/build`;
+- installa `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, i
+  bootloader e i firmware necessari;
+- esegue `./auto/config` e `./auto/build`;
+- lascia la ISO in `livedeb13-amd64.hybrid.iso` e riporta i file generati in
+  proprietà all'utente host.
+
+La prima esecuzione scarica l'immagine `debian:trixie` (~120 MB) e richiede
+10–30 minuti; le successive sono più rapide.
+
+### 8.2 GitHub Actions (nessuna installazione locale)
+
+Nel repository: scheda **Actions** → **Build LiveDeb13 ISO** →
+**Run workflow** (scegli la tua branch). Al termine scarica l'artifact
+`livedeb13-amd64-<branch>`, che contiene la ISO.
+
+> Il workflow è eseguibile da qui solo dopo che `.github/workflows/build.yml`
+> è presente sul branch di default (`main`): se "Run workflow" non compare,
+> fai il merge della branch in `main` e riprova — oppure usa §8.1/§8.3.
+
+### 8.3 Installare la live-build di Debian sull'host (Ubuntu)
+
+Miscela non supportata ufficialmente, ma funziona perché live-build è solo
+shell + `debootstrap`:
+
+```bash
+sudo apt purge live-build
+cd /tmp
+wget http://deb.debian.org/debian/pool/main/l/live-build/live-build_20250505+deb13u1_all.deb
+sudo apt install ./live-build_20250505+deb13u1_all.deb
+hash -r
+lb --version          # deve mostrare 20250505+deb13u1
+
+cd ~/LiveDeb13
+sudo make distclean
+sudo make build
+```
+
+Se `debootstrap` di Ubuntu è troppo vecchio per `trixie`, installa anche
+quello di Debian (`debootstrap_*_all.deb` dallo stesso mirror) oppure usa
+§8.1.

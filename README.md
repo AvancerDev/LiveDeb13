@@ -27,6 +27,11 @@ sudo apt install -y live-build debootstrap squashfs-tools xorriso isolinux \
 
 > **Nota:** `live-build` deve essere la versione di trixie (`live-build >= 20250505`).
 > Su Debian 12 potrebbe funzionare, ma alcuni flag di `lb config` sono diversi.
+>
+> **Su Ubuntu** il pacchetto `live-build` è fermo al 2013 (`3.0~a57`) e **non**
+> può costruire Debian 13: usa il container Debian 13 con `./build-docker.sh`
+> (oppure `make docker`, richiede docker/podman) o compila via GitHub Actions.
+> Vedi [`docs/BUILD.md`](docs/BUILD.md) §8.
 
 ---
 
@@ -166,12 +171,18 @@ in `auto/config` (`--security false`). Dopo un aggiornamento del progetto:
 `make config && sudo make distclean && sudo make build`.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.1.
 
-**`lb --version` mostra `3.0~a57`?**
-È una live-build dell'epoca Debian 7/8: non può costruire Debian 13 (opzioni
-mancanti, `gzip: stdin: unexpected end of file`, `--force-yes`…). Rimuovila e
-installa quella di trixie: `sudo apt purge live-build && sudo rm -f /usr/local/bin/lb && sudo apt install live-build`.
-`auto/config` e `make check` si fermano con un messaggio chiaro in questo caso.
-Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3.
+**Sono su Ubuntu e `lb --version` mostra `3.0~a57`?**
+Ubuntu impacchetta una live-build del 2013, che non può costruire Debian 13.
+Usa un ambiente Debian 13:
+
+```bash
+sudo apt install docker.io
+./build-docker.sh          # oppure: make docker
+```
+
+In alternativa compila la ISO con GitHub Actions (Actions → Build LiveDeb13 ISO
+→ Run workflow) oppure installa la live-build di Debian sull'host.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3 e §8.
 
 **`gzip: stdin: unexpected end of file` / `make: *** Errore 1`?**
 Di solito è un download troncato o una cache corrotta: `sudo make distclean && sudo rm -rf chroot binary cache .build && sudo env CACHE=false make build`. Per diagnosi: `sudo make debug` (log in `build.log`). Vedi [`docs/BUILD.md`](docs/BUILD.md) §6.2.
