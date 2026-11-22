@@ -216,9 +216,12 @@ build successive riusano `cache/` e `chroot/`: si riscaricano solo i pacchetti
 cambiati, non l’ISO. Evita `make distclean` e `--clean`, che svuotano la cache.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §9.
 
-**`Do you want to continue? [Y/n] Abort.`?**
-`--apt-options` in `auto/config` deve contenere `--yes` (sostituisce il default di
-live-build). Già corretto nel progetto: aggiorna con `git pull`.
+**`Do you want to continue? [Y/n] Abort.` / build che esce con 1?**
+Apt si ferma perché manca `--yes` in `--apt-options` (sostituisce il default di
+live-build). Nel progetto `auto/config` ora lo aggiunge **da solo**, anche se
+sovrascrivi `APT_OPTIONS`: aggiorna con `git pull`. Se fallisce ancora,
+`./build-docker.sh` salva tutto in `build.log`: controlla con
+`grep -n 'Y/n\|Abort\|unexpected failure' build.log` e allegalo per l’analisi.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.6.
 
 **`E: Unable to locate package …`?**

@@ -129,6 +129,8 @@ fi
 # --- Build -------------------------------------------------------------------
 echo "==> Build in container debian:trixie con $RUNTIME (può durare 10-30 minuti)..."
 echo "    ISO finale: livedeb13-amd64.hybrid.iso"
+echo "    Log completo: build.log"
+set +e
 ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
   -e DEBIAN_FRONTEND=noninteractive \
   -e LIVEDEB13_IN_CONTAINER=1 \
@@ -153,7 +155,32 @@ ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
 
     chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary 2>/dev/null || true
     chown \"\${HOST_UID}:\${HOST_GID}\" ./*.iso 2>/dev/null || true
-  "
+  " 2>&1 | tee build.log
+RC=${PIPESTATUS[0]}
+set -e
+
+# --- Diagnosi in caso di fallimento -----------------------------------------
+if [ "$RC" -ne 0 ]; then
+  echo
+  echo "ERRORE: build fallita (exit $RC). Log completo salvato in: build.log" >&2
+  echo "--- ultime 30 righe di build.log ---" >&2
+  tail -n 30 build.log >&2 || true
+  echo >&2
+  cat >&2 <<'HINT'
+Rimedi rapidi (in ordine di frequenza):
+  grep -n 'Y/n\|Abort\|unexpected failure' build.log
+      -> apt ha chiesto conferma: manca --yes in --apt-options (auto/config).
+  grep -n 'Temporary failure resolving' build.log
+      -> rete/DNS del container: ./build-docker.sh --net-host
+  grep -n 'Unable to locate package' build.log
+      -> nome pacchetto errato: ./check-packages.sh
+  grep -n 'Unable to correct problems\|is in a very bad inconsistent state\|dpkg was interrupted' build.log
+      -> stato sporco: sudo rm -rf chroot binary cache .build && ./build-docker.sh --clean
+HINT
+  echo >&2
+  echo "Suggerimento: ./build-docker.sh --clean   (riparte da zero, riscarica ~1,5 GB)" >&2
+  exit "$RC"
+fi
 
 echo
 if [ -f livedeb13-amd64.hybrid.iso ]; then

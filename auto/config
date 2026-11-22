@@ -100,6 +100,20 @@ rm -f config/binary config/bootstrap config/chroot config/common config/source c
 MIRROR="${DEBIAN_MIRROR:-http://deb.debian.org/debian/}"
 SECURITY_MIRROR="${DEBIAN_SECURITY_MIRROR:-http://security.debian.org/debian-security/}"
 
+# --- Opzioni apt ------------------------------------------------------------
+# ATTENZIONE: --apt-options SOSTITUISCE il default di live-build ("--yes");
+# senza --yes apt chiede conferma (es. alla rimozione dei pacchetti temporanei
+# come dctrl-tools) e la build si ferma con
+#   "Do you want to continue? [Y/n] Abort." + "E: An unexpected failure"
+# Per questo --yes viene SEMPRE garantito, anche quando APT_OPTIONS arriva
+# dall'esterno (make build, build-docker.sh, CI) senza di esso.
+APT_OPTIONS="${APT_OPTIONS:---option Acquire::Retries=5 --option Acquire::http::Timeout=120}"
+case " ${APT_OPTIONS} " in
+  *" --yes "*) ;;
+  *) APT_OPTIONS="--yes ${APT_OPTIONS}" ;;
+esac
+echo "APT_OPTIONS: ${APT_OPTIONS}"
+
 # Coppie "opzione valore" (tutte le opzioni usate qui richiedono un valore).
 ARGS=(
   --distribution trixie
@@ -134,11 +148,7 @@ ARGS=(
   --backports false
   --apt-source-archives false
   --apt-indices true
-  # ATTENZIONE: --apt-options SOSTITUISCE il default di live-build ("--yes");
-  # senza --yes apt chiede conferma (es. alla rimozione dei pacchetti
-  # temporanei come dctrl-tools) e la build abortisce con
-  # "Do you want to continue? [Y/n] Abort." + "E: An unexpected failure".
-  --apt-options "${APT_OPTIONS:---yes --option Acquire::Retries=5 --option Acquire::http::Timeout=120}"
+  --apt-options "${APT_OPTIONS}"
   --keyring-packages debian-archive-keyring
   --cache "${CACHE:-true}"
   --chroot-filesystem squashfs

@@ -310,10 +310,20 @@ Rimedio: `--apt-options` deve **sempre** iniziare con `--yes` (o `-y`):
 --apt-options "--yes --option Acquire::Retries=5 --option Acquire::http::Timeout=120"
 ```
 
-Lo stesso vale se la sovrascrivi da ambiente:
+Da questa versione del progetto `auto/config` **aggiunge `--yes` da solo** se
+manca, quindi anche una sovrascrittura da ambiente non può più reintrodurre il
+problema:
 
 ```bash
-sudo env APT_OPTIONS="--yes --option Acquire::Retries=10 --option Acquire::http::Timeout=300" make build
+# va bene anche senza --yes: viene aggiunto da auto/config
+sudo env APT_OPTIONS="--option Acquire::Retries=10 --option Acquire::http::Timeout=300" make build
+```
+
+Per verificare cosa viene passato davvero a `lb config`:
+
+```bash
+./auto/config 2>&1 | grep APT_OPTIONS
+# APT_OPTIONS: --yes --option Acquire::Retries=5 --option Acquire::http::Timeout=120
 ```
 
 ### 6.5 `E: Unable to locate package <nome>`
@@ -504,6 +514,11 @@ Regola d’oro: **non cancellare `cache/` e `chroot/`**, sono la cache.
 | `./build-docker.sh` | nulla | no (solo i cambiamenti) |
 | `make clean` | `chroot/`, `binary/` | no: reinstalla dai `.deb` in `cache/` |
 | `make distclean`, `./build-docker.sh --clean` | tutto, `cache/` compresa | **sì, da zero (~1,5 GB)** |
+
+Ogni build lanciata con `./build-docker.sh` salva l’output completo in
+`build.log` (nella radice del progetto) e, in caso di errore, ne stampa le
+ultime 30 righe con i controlli da fare: se ti serve aiuto, basta allegare
+quel file.
 
 La CI resta utile per: verificare che la build funzioni su un ambiente pulito,
 avere un’ISO “ufficiale” a ogni push, e produrla se non hai Debian 13 né
