@@ -1,13 +1,41 @@
 #!/bin/sh
 # LiveDeb13 — build dell'ISO (richiede root)
 #
-# 1) Rimuoviamo lo stage file `.build/config` prima di `lb build`: in questo
-#    modo live-build riesegue sempre auto/config, quindi ogni modifica alla
-#    configurazione (mirror, opzioni, ...) viene applicata.
-# 2) Se live-build non supporta --image-name, il nome dell'ISO è quello
+# Comportamento:
+# 1) Se la live-build dell'host manca o è troppo vecchia (serie 2.x/3.x, tipica
+#    di Ubuntu) e docker/podman è disponibile, la build viene eseguita
+#    automaticamente in un container Debian 13 (build-docker.sh).
+# 2) Rimuoviamo lo stage file `.build/config` prima di `lb build`: così
+#    live-build riesegue sempre auto/config.
+# 3) Se live-build non supporta --image-name, il nome dell'ISO è quello
 #    predefinito (live-image-amd64.hybrid.iso): la rinominiamo comunque in
 #    livedeb13-amd64.hybrid.iso, che è il nome atteso da Makefile e docs.
 set -e
+
+lb_version_ok() {
+  command -v lb >/dev/null 2>&1 || return 1
+  _v="$(lb --version 2>/dev/null | head -n 1)"
+  _v="${_v#live-build }"
+  _v="${_v##*:}"                     # rimuove un eventuale epoch "1:"
+  case "${_v}" in
+    2.*|3.*|"") return 1 ;;          # live-build di Debian 7/8: inutilizzabile
+  esac
+  return 0
+}
+
+# --- Delegazione automatica al container Debian 13 ---------------------------
+if [ "${LIVEDEB13_IN_CONTAINER:-0}" != "1" ] && ! lb_version_ok; then
+  if [ -x ./build-docker.sh ] && { command -v docker >/dev/null 2>&1 || command -v podman >/dev/null 2>&1; }; then
+    echo "==> live-build dell'host assente o troppo vecchia (serie 2.x/3.x)."
+    echo "==> Eseguo la build in un container Debian 13 (build-docker.sh)..."
+    exec ./build-docker.sh "$@"
+  fi
+  echo "ERRORE: impossibile compilare con la live-build dell'host (troppo vecchia)." >&2
+  echo "        Installa docker/podman e usa ./build-docker.sh, oppure vedi" >&2
+  echo "        docs/BUILD.md §8 (container / GitHub Actions / live-build di Debian)." >&2
+  exit 1
+fi
+# -----------------------------------------------------------------------------
 
 rm -f .build/config
 

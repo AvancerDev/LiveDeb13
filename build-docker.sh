@@ -11,6 +11,7 @@
 #   ./build-docker.sh --clean         # pulizia prima della build
 #   ./build-docker.sh --net-host      # usa la rete dell'host (DNS incluso)
 #   ./build-docker.sh --dns 192.168.1.1
+#   ./build-docker.sh --debug   # passa --debug a lb build
 #   RUNTIME=podman ./build-docker.sh
 #
 # Note:
@@ -25,6 +26,7 @@ CLEAN=0
 NET_OPTS=()
 DNS_EXPLICIT=0
 HOST_NET=0
+LB_ARGS=()
 
 usage() { sed -n '2,22p' "$0"; }
 
@@ -38,6 +40,7 @@ while [ $# -gt 0 ]; do
       NET_OPTS+=(--dns "$1"); DNS_EXPLICIT=1 ;;
     --dns=*)
       NET_OPTS+=(--dns "${1#--dns=}"); DNS_EXPLICIT=1 ;;
+    --debug|--force|--verbose|--quiet) LB_ARGS+=("$1") ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Argomento sconosciuto: $1"; usage; exit 1 ;;
   esac
@@ -128,6 +131,8 @@ echo "==> Build in container debian:trixie con $RUNTIME (può durare 10-30 minut
 echo "    ISO finale: livedeb13-amd64.hybrid.iso"
 ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
   -e DEBIAN_FRONTEND=noninteractive \
+  -e LIVEDEB13_IN_CONTAINER=1 \
+  -e LB_ARGS="${LB_ARGS[*]:-}" \
   -e HOST_UID="$HOST_UID" -e HOST_GID="$HOST_GID" \
   debian:trixie bash -c "
     set -e
@@ -143,7 +148,8 @@ ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
     lb --version
 
     ./auto/config
-    ./auto/build
+    # shellcheck disable=SC2086
+    ./auto/build \${LB_ARGS:-}
 
     chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary 2>/dev/null || true
     chown \"\${HOST_UID}:\${HOST_GID}\" ./*.iso 2>/dev/null || true

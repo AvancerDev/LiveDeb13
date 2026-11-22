@@ -230,7 +230,11 @@ Causa: **Ubuntu impacchetta una live-build ferma al 2013**
 Quella versione non può costruire Debian 13, in nessun modo.
 
 Rimedio: usa un ambiente Debian 13 — vedi **§8** (container `debian:trixie`,
-GitHub Actions, o installazione della live-build di Debian). Poi:
+GitHub Actions, o installazione della live-build di Debian).
+
+Da quando esiste `build-docker.sh`, **`sudo make build` fa tutto da solo**: se
+la live-build dell'host è assente o troppo vecchia e docker/podman è installato,
+`auto/build` delega automaticamente la build al container Debian 13. Poi:
 
 ```bash
 sudo make distclean           # o: ./build-docker.sh --clean
@@ -310,8 +314,12 @@ sudo apt install docker.io        # oppure: sudo apt install podman
 RUNTIME=podman ./build-docker.sh  # se preferisci podman
 ```
 
+`sudo make build` (o `make debug`) su Ubuntu **delega automaticamente** a
+`build-docker.sh`: è sufficiente avere docker o podman installato.
+
 Lo script:
 
+- verifica il DNS dentro il container e aggiunge DNS pubblici se serve;
 - avvia `debian:trixie` con `--privileged` (serve per chroot e mount);
 - monta la cartella del progetto in `/build`;
 - installa `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, i

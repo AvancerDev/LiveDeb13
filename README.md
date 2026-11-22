@@ -29,8 +29,9 @@ sudo apt install -y live-build debootstrap squashfs-tools xorriso isolinux \
 > Su Debian 12 potrebbe funzionare, ma alcuni flag di `lb config` sono diversi.
 >
 > **Su Ubuntu** il pacchetto `live-build` è fermo al 2013 (`3.0~a57`) e **non**
-> può costruire Debian 13: usa il container Debian 13 con `./build-docker.sh`
-> (oppure `make docker`, richiede docker/podman) o compila via GitHub Actions.
+> può costruire Debian 13. Con docker/podman installato, `sudo make build`
+> esegue automaticamente la build in un container Debian 13
+> (`./build-docker.sh`); in alternativa compila via GitHub Actions.
 > Vedi [`docs/BUILD.md`](docs/BUILD.md) §8.
 
 ---
