@@ -209,6 +209,13 @@ ls -lh livedeb13-amd64.hybrid.iso
 Dall’interfaccia web invece si scarica uno `.zip` da estrarre a mano.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §7.
 
+**Devo scaricare 1,45 GB di ISO a ogni modifica?**
+No. Compilando in locale l’ISO compare direttamente nella cartella del
+progetto (`./build-docker.sh`, oppure `sudo make build` su Debian 13) e le
+build successive riusano `cache/` e `chroot/`: si riscaricano solo i pacchetti
+cambiati, non l’ISO. Evita `make distclean` e `--clean`, che svuotano la cache.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §9.
+
 **`Do you want to continue? [Y/n] Abort.`?**
 `--apt-options` in `auto/config` deve contenere `--yes` (sostituisce il default di
 live-build). Già corretto nel progetto: aggiorna con `git pull`.

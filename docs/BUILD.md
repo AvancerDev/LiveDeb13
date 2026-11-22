@@ -476,3 +476,36 @@ sudo make build
 Se `debootstrap` di Ubuntu è troppo vecchio per `trixie`, installa anche
 quello di Debian (`debootstrap_*_all.deb` dallo stesso mirror) oppure usa
 §8.1.
+
+## 9. Build locale o CI: cosa si scarica ogni volta
+
+L’ISO pesa ~1,45 GB: è il collo di bottiglia quando la rete è lenta.
+
+| | Download di pacchetti | Download dell’ISO |
+|---|---|---|
+| **CI** (GitHub Actions) | ~1,2–1,5 GB **a ogni run** (runner usa-e-getta) | 1,45 GB di artifact da scaricare |
+| **Build locale, prima volta** | ~1,2–1,5 GB (bootstrap + firmware) | nessuno |
+| **Build locale, volte successive** | solo i `.deb` nuovi o cambiati (spesso 0–100 MB) | nessuno |
+
+Quindi per iterare sulla configurazione **conviene compilare in locale**: il
+primo giro costa quanto la CI, tutti gli altri quasi solo CPU (squashfs +
+xorriso, circa 3–8 minuti).
+
+```bash
+./build-docker.sh        # host Ubuntu: build in container Debian 13
+# oppure, su Debian 13:  sudo make build
+make run                 # avvia l'ISO appena prodotta in QEMU
+```
+
+Regola d’oro: **non cancellare `cache/` e `chroot/`**, sono la cache.
+
+| Comando | Cosa rimuove | Riscarica i pacchetti? |
+|---|---|---|
+| `./build-docker.sh` | nulla | no (solo i cambiamenti) |
+| `make clean` | `chroot/`, `binary/` | no: reinstalla dai `.deb` in `cache/` |
+| `make distclean`, `./build-docker.sh --clean` | tutto, `cache/` compresa | **sì, da zero (~1,5 GB)** |
+
+La CI resta utile per: verificare che la build funzioni su un ambiente pulito,
+avere un’ISO “ufficiale” a ogni push, e produrla se non hai Debian 13 né
+docker. Per il lavoro quotidiano, la build locale è più veloce e non scarica
+niente.
