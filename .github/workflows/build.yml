@@ -7,47 +7,68 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Se pushi di nuovo sulla stessa branch, annulla la run precedente
+concurrency:
+  group: iso-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     container:
       image: debian:trixie
       options: --privileged
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      ISO_NAME: livedeb13-amd64.hybrid.iso
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Spazio disco disponibile
+        run: df -h / | sed 's/^/  /'
+
       - name: Install dependencies
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          apt-get install -y --no-install-recommends \
             live-build debootstrap squashfs-tools xorriso isolinux \
             syslinux-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools \
-            ca-certificates sudo
+            cpio zstd xz-utils file rsync ca-certificates wget
+          lb --version
 
       - name: Configure
         run: ./auto/config
+
+      - name: Mostra la configurazione live-build
+        run: |
+          lb config --dump | grep -E "LB_(DISTRIBUTION|ARCHITECTURE|IMAGE_NAME|IMAGE_TYPE|SECURITY|DEBIAN_INSTALLER|MIRROR_BINARY)=" | sort || true
 
       - name: Build ISO
         run: ./auto/build
 
       - name: Show ISO info
         run: |
-          ls -lh *.iso
-          sha256sum *.iso || true
+          ls -lh ./*.iso || true
+          sha256sum ./*.iso || true
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
-          name: livedeb13-amd64-${{ github.ref_name }}
-          path: "*.iso"
+          name: livedeb13-amd64-${{ github.head_ref || github.ref_name }}
+          path: ${{ env.ISO_NAME }}
           retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
 
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log-${{ github.ref_name }}
-          path: "*.build.log"
+          name: build-log-${{ github.head_ref || github.ref_name }}
+          path: |
+            *.log
+            *.build.log
           retention-days: 7
           if-no-files-found: ignore
