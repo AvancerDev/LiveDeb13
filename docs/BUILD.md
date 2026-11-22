@@ -512,6 +512,7 @@ Regola d’oro: **non cancellare `cache/` e `chroot/`**, sono la cache.
 | Comando | Cosa rimuove | Riscarica i pacchetti? |
 |---|---|---|
 | `./build-docker.sh` | nulla | no (solo i cambiamenti) |
+| `./build-docker.sh --reset` | `chroot/`, `binary/`, `.build/` | no: reinstalla dai `.deb` in `cache/` |
 | `make clean` | `chroot/`, `binary/` | no: reinstalla dai `.deb` in `cache/` |
 | `make distclean`, `./build-docker.sh --clean` | tutto, `cache/` compresa | **sì, da zero (~1,5 GB)** |
 

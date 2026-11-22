@@ -45,10 +45,11 @@ if ! lb build noauto "$@"; then
 ================= BUILD FALLITA =================
 Suggerimenti rapidi (dettagli in docs/BUILD.md §6):
 
-1) Pulizia totale e nuovo tentativo:
-     sudo make distclean
+1) Stato sporco (build precedente interrotta): è la causa più frequente.
+   Reset veloce, SENZA riscaricare i pacchetti:
+     ./build-docker.sh --reset
+   Pulizia totale (riscarica ~1,5 GB), solo se il reset non basta:
      sudo rm -rf chroot binary cache .build
-     sudo make build
 
 2) Errori tipo "gzip: stdin: unexpected end of file" (file scaricati
    troncati / cache corrotta) → riscarica tutto senza cache:
@@ -57,8 +58,8 @@ Suggerimenti rapidi (dettagli in docs/BUILD.md §6):
 3) Mirror alternativo (es. italiano):
      sudo env DEBIAN_MIRROR=http://ftp.it.debian.org/debian/ make build
 
-4) Log completo da allegare:
-     sudo make debug        # genera build.log
+4) Log completo (qui dentro: /build/build.log, cioè build.log nella radice):
+     tail -n 40 build.log
 =================================================
 EOF
   exit 1

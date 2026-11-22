@@ -8,7 +8,8 @@
 # Requisiti: docker oppure podman.
 # Uso:
 #   ./build-docker.sh                 # build completa
-#   ./build-docker.sh --clean         # pulizia prima della build
+#   ./build-docker.sh --reset         # reset veloce: rifà chroot/binary, tiene cache/
+#   ./build-docker.sh --clean         # pulizia totale (svuota anche cache/)
 #   ./build-docker.sh --net-host      # usa la rete dell'host (DNS incluso)
 #   ./build-docker.sh --dns 192.168.1.1
 #   ./build-docker.sh --debug   # passa --debug a lb build
@@ -23,6 +24,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CLEAN=0
+RESET=0
 NET_OPTS=()
 DNS_EXPLICIT=0
 HOST_NET=0
@@ -33,6 +35,7 @@ usage() { sed -n '2,22p' "$0"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --clean) CLEAN=1 ;;
+    --reset|--fast) RESET=1 ;;
     --net-host) NET_OPTS+=(--network host); HOST_NET=1 ;;
     --dns)
       shift
@@ -110,6 +113,15 @@ apt_install() {
   done
 }
 '
+
+# --- Reset veloce (chroot/binary sporchi, cache dei .deb conservata) ---------
+if [ "$RESET" = "1" ]; then
+  echo "==> Reset veloce: rimuovo chroot/, binary/ e .build/ (cache/ conservata)"
+  echo "    Nessun riscaricamento: si riparte dai .deb già in cache/."
+  if ! rm -rf chroot binary .build 2>/dev/null; then
+    ${SUDO} rm -rf chroot binary .build
+  fi
+fi
 
 # --- Pulizia preventiva ------------------------------------------------------
 if [ "$CLEAN" = "1" ]; then
