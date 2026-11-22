@@ -108,6 +108,7 @@ Verifica la chiavetta con `lsblk` prima di scrivere.
 | ISO non si avvia in UEFI | Disattiva Secure Boot oppure verifica OVMF; usa `make run-uefi` |
 | Build sporca / errori strani | `sudo make distclean && sudo make build` |
 | Pacchetto non trovato | Verifica nome in trixie e componenti in `auto/config` (`--archive-areas`) |
+| `Temporary failure resolving 'deb.debian.org'` | Vedi §6.4 (DNS/rete: `--net-host`, `--dns`, mirror alternativo) |
 | `gzip: stdin: unexpected end of file` / `Errore 1` generico | Vedi §6.2 (pulizia totale, `CACHE=false`, mirror alternativo, `make debug`) |
 | `lb config: opzione non riconosciuta "--xxx"` | `auto/config` filtra le opzioni non supportate; se l'errore compare, aggiorna il progetto (`git pull`) e riporta l'output di `lb --version` |
 | `E: The repository 'http://security.debian.org trixie/updates Release' does not have a Release file` | Vedi §6.1 |
@@ -240,6 +241,49 @@ sudo make build               # oppure: ./build-docker.sh
 `auto/config` e `make check` verificano la versione e si fermano subito con un
 messaggio esplicito se rilevano la serie 2.x/3.x, senza sprecare una build.
 
+### 6.4 `Temporary failure resolving 'deb.debian.org'`
+
+```
+Err:1 http://deb.debian.org/debian trixie/main amd64 dctrl-tools ...
+  Temporary failure resolving 'deb.debian.org'
+E: Failed to fetch ... Unable to fetch some archives
+```
+
+Non è un problema della configurazione: **il sistema che compila non riesce a
+risolvere i nomi DNS** (o la connessione è instabile/molto lenta). Diagnosi:
+
+```bash
+getent hosts deb.debian.org          # deve stampare un IP
+curl -sI http://deb.debian.org/debian/ | head -1
+```
+
+Rimedi:
+
+- **Build in container** (`./build-docker.sh`): lo script verifica il DNS nel
+  container e, se non funziona, aggiunge DNS pubblici; in alternativa forza la
+  rete dell'host (utile con proxy/DNS aziendali o systemd-resolved):
+
+  ```bash
+  ./build-docker.sh --net-host
+  ./build-docker.sh --dns 192.168.1.1     # DNS specifico
+  ```
+
+- **Rete lenta**: i timeout sono già a 120 s con 5 tentativi (`auto/config`);
+  puoi alzarli:
+
+  ```bash
+  sudo env APT_OPTIONS="--option Acquire::Retries=10 --option Acquire::http::Timeout=300" make build
+  ```
+
+- **Mirror più vicino/veloce**:
+
+  ```bash
+  sudo env DEBIAN_MIRROR=http://ftp.it.debian.org/debian/ make build
+  ```
+
+- **Connessione molto lenta**: valuta la build su GitHub Actions (§8.2), che
+  scarica tutto dai server GitHub/Debian e ti restituisce solo la ISO.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`.
@@ -261,6 +305,8 @@ live-build deve girare su **Debian 13**: su Ubuntu il pacchetto è la
 sudo apt install docker.io        # oppure: sudo apt install podman
 ./build-docker.sh                 # alias: make docker
 ./build-docker.sh --clean         # con pulizia preventiva
+./build-docker.sh --net-host      # rete dell'host (DNS/proxy aziendali)
+./build-docker.sh --dns 1.1.1.1   # DNS specifico
 RUNTIME=podman ./build-docker.sh  # se preferisci podman
 ```
 

@@ -94,8 +94,9 @@ esac
 # non vengono toccate.
 rm -f config/binary config/bootstrap config/chroot config/common config/source config/image
 
-# Mirror configurabili senza modificare lo script, es.:
+# Parametri rete configurabili senza modificare lo script, es.:
 #   sudo env DEBIAN_MIRROR=http://ftp.it.debian.org/debian/ make build
+#   sudo env APT_OPTIONS="--option Acquire::Retries=10 --option Acquire::http::Timeout=300" make build
 MIRROR="${DEBIAN_MIRROR:-http://deb.debian.org/debian/}"
 SECURITY_MIRROR="${DEBIAN_SECURITY_MIRROR:-http://security.debian.org/debian-security/}"
 
@@ -133,7 +134,7 @@ ARGS=(
   --backports false
   --apt-source-archives false
   --apt-indices true
-  --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30"
+  --apt-options "${APT_OPTIONS:---option Acquire::Retries=5 --option Acquire::http::Timeout=120}"
   --keyring-packages debian-archive-keyring
   --cache "${CACHE:-true}"
   --chroot-filesystem squashfs

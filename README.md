@@ -184,6 +184,12 @@ In alternativa compila la ISO con GitHub Actions (Actions → Build LiveDeb13 IS
 → Run workflow) oppure installa la live-build di Debian sull'host.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3 e §8.
 
+**`Temporary failure resolving 'deb.debian.org'`?**
+È la rete/DNS della macchina che compila, non la configurazione. In container:
+`./build-docker.sh --net-host` (o `--dns 1.1.1.1`). Su rete lenta alza i
+timeout con `sudo env APT_OPTIONS="--option Acquire::Retries=10 --option Acquire::http::Timeout=300" make build`
+e/o usa un mirror vicino. Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.4.
+
 **`gzip: stdin: unexpected end of file` / `make: *** Errore 1`?**
 Di solito è un download troncato o una cache corrotta: `sudo make distclean && sudo rm -rf chroot binary cache .build && sudo env CACHE=false make build`. Per diagnosi: `sudo make debug` (log in `build.log`). Vedi [`docs/BUILD.md`](docs/BUILD.md) §6.2.
 
