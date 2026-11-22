@@ -13,8 +13,12 @@ Verifica:
 
 ```bash
 make check
-lb --version
+lb --version     # deve essere la 1:20250505+deb13u1 (o successiva), NON 3.0~a57
 ```
+
+> **Attenzione:** se `lb --version` risponde `3.0~a57` hai una live-build
+> dell'epoca Debian 7/8, che **non** può costruire immagini Debian 13.
+> Vedi §6.3.
 
 ## 2. Configurazione
 
@@ -145,6 +149,47 @@ sudo make build
 Se dopo `make build` il problema si ripresenta, allega l'output di
 `lb --version` e di `lb config --help | head -40`: serve a capire quali
 opzioni supporta la tua live-build.
+
+### 6.3 `lb --version` = `3.0~a57` (live-build troppo vecchia)
+
+Sintomo: `lb config` rifiuta opzioni (`--image-name`, `--bootloaders`,
+`--updates`, …), la build si ferma in `lb_chroot_linux-image` con
+`gzip: stdin: unexpected end of file`, e nel log compaiono variabili
+d'epoca Debian 7/8:
+
+```
+LB_CONFIG_VERSION='3.0~a57'
+LB_UNION_FILESYSTEM='aufs'
+W: --force-yes is deprecated
+```
+
+Causa: è installata una live-build 2.x/3.x (Debian 7/8), ad esempio perché
+`lb` è stato installato a mano in `/usr/local/bin` o perché l'host usa
+sorgenti APT di una release vecchia. **live-build 3.x non è compatibile con
+Debian 13**: va sostituita.
+
+Rimedio:
+
+```bash
+which lb                      # se è /usr/local/bin/lb → installata a mano
+sudo apt purge live-build
+sudo rm -f /usr/local/bin/lb /usr/local/sbin/lb
+sudo apt update
+sudo apt install live-build
+hash -r
+lb --version                  # deve mostrare 20250... e NON 3.0~a57
+
+sudo make distclean
+sudo rm -rf chroot binary cache .build
+sudo make build
+```
+
+Se `apt-cache policy live-build` continua a proporre la `3.0~a57`, controlla
+le sorgenti APT dell'host (`/etc/apt/sources.list`, `/etc/apt/sources.list.d/`):
+devono puntare a `trixie`, non a release vecchie.
+
+`auto/config` e `make check` verificano la versione e si fermano con un
+messaggio esplicito se rilevano la serie 2.x/3.x.
 
 ### 6.2 Altri errori generici (`Errore 1`, `gzip: stdin: unexpected end of file`)
 

@@ -60,5 +60,9 @@ check: ## Verifica prerequisiti (lb, debootstrap, xorriso…)
 	@command -v debootstrap >/dev/null || (echo "ERRORE: debootstrap non installato."; exit 1)
 	@command -v xorriso >/dev/null || (echo "ERRORE: xorriso non installato."; exit 1)
 	@command -v mksquashfs >/dev/null || (echo "ERRORE: squashfs-tools non installato."; exit 1)
-	@$(LB) --version | sed 's/^/live-build: /' || true
+	@v=$$($(LB) --version 2>/dev/null | head -n1); echo "live-build: $${v:-sconosciuta}"; \
+	 case "$${v#live-build }" in \
+	   2.*|3.*) echo "ERRORE: live-build troppo vecchia (serie 2.x/3.x): serve quella di trixie (1:20250505+deb13u1)."; \
+	            echo "        Vedi docs/BUILD.md §6.3"; exit 1 ;; \
+	 esac
 	@echo "Prerequisiti OK."

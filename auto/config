@@ -38,6 +38,42 @@ set -e
 
 cd "$(dirname "$0")/.."
 
+# --- Controllo versione live-build -------------------------------------------
+# live-build 2.x/3.x (es. "3.0~a57", epoca Debian 7/8) NON può costruire
+# immagini Debian 13: usa ancora aufs, --force-yes, sorgenti APT vecchio stile
+# e non supporta molte opzioni. Va sostituita con quella di trixie.
+LB_VERSION_LINE="$(lb --version 2>/dev/null | head -n 1)"
+LB_VERSION="${LB_VERSION_LINE#live-build }"
+LB_VERSION_NOVERSION="${LB_VERSION##*:}"   # rimuove un eventuale epoch "1:"
+case "${LB_VERSION_NOVERSION}" in
+  2.*|3.*)
+    cat >&2 <<'AVVISO'
+
+ERRORE: la live-build installata e' troppo vecchia (serie 2.x/3.x, epoca
+        Debian 7/8): non e' in grado di costruire un'immagine Debian 13
+        (usa ancora aufs, --force-yes, sorgenti APT vecchio stile).
+
+Serve live-build di trixie (1:20250505+deb13u1 o successiva). Per sistemare:
+
+  which lb                      # se e' /usr/local/bin/lb e' installata a mano
+  sudo apt purge live-build
+  sudo rm -f /usr/local/bin/lb /usr/local/sbin/lb
+  sudo apt update
+  sudo apt install live-build
+  hash -r
+  lb --version                  # deve mostrare 20250... e NON 3.0~a57
+
+Se 'apt-cache policy live-build' propone ancora la 3.0~a57, la tua
+/etc/apt/sources.list punta a una release Debian vecchia: correggila prima
+di continuare (deve puntare a trixie).
+
+AVVISO
+    echo "Versione rilevata: ${LB_VERSION_LINE}"
+    exit 1
+    ;;
+esac
+# -----------------------------------------------------------------------------
+
 # Rimuove i file di configurazione salvati da un'esecuzione precedente di
 # `lb config` (vedi lb_config(1): vanno eliminati prima di rigenerare,
 # altrimenti valori vecchi possono restare "congelati" nella configurazione).

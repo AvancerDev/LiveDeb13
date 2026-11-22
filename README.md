@@ -166,6 +166,13 @@ in `auto/config` (`--security false`). Dopo un aggiornamento del progetto:
 `make config && sudo make distclean && sudo make build`.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.1.
 
+**`lb --version` mostra `3.0~a57`?**
+È una live-build dell'epoca Debian 7/8: non può costruire Debian 13 (opzioni
+mancanti, `gzip: stdin: unexpected end of file`, `--force-yes`…). Rimuovila e
+installa quella di trixie: `sudo apt purge live-build && sudo rm -f /usr/local/bin/lb && sudo apt install live-build`.
+`auto/config` e `make check` si fermano con un messaggio chiaro in questo caso.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3.
+
 **`gzip: stdin: unexpected end of file` / `make: *** Errore 1`?**
 Di solito è un download troncato o una cache corrotta: `sudo make distclean && sudo rm -rf chroot binary cache .build && sudo env CACHE=false make build`. Per diagnosi: `sudo make debug` (log in `build.log`). Vedi [`docs/BUILD.md`](docs/BUILD.md) §6.2.
 
