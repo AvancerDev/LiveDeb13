@@ -28,6 +28,19 @@ Questo rigenera i file di configurazione di live-build a partire da
 (`auto/build` rimuove lo stage file `.build/config`), quindi le modifiche
 alla configurazione sono sempre applicate.
 
+**Compatibilità tra versioni di live-build:** `auto/config` interroga
+`lb config --help` e passa solo le opzioni supportate dall'istanza installata;
+le altre vengono saltate con un avviso del tipo:
+
+```
+ATTENZIONE: opzioni non supportate da questa versione di live-build, ignorate:
+  --image-name
+```
+
+Se viene saltata `--image-name`, l'ISO prodotta da live-build si chiama
+`live-image-amd64.hybrid.iso`: `auto/build` la rinomina comunque in
+`livedeb13-amd64.hybrid.iso`.
+
 ## 3. Build
 
 ```bash
@@ -91,6 +104,7 @@ Verifica la chiavetta con `lsblk` prima di scrivere.
 | ISO non si avvia in UEFI | Disattiva Secure Boot oppure verifica OVMF; usa `make run-uefi` |
 | Build sporca / errori strani | `sudo make distclean && sudo make build` |
 | Pacchetto non trovato | Verifica nome in trixie e componenti in `auto/config` (`--archive-areas`) |
+| `lb config: opzione non riconosciuta "--xxx"` | `auto/config` filtra le opzioni non supportate; se l'errore compare, aggiorna il progetto (`git pull`) e riporta l'output di `lb --version` |
 | `E: The repository 'http://security.debian.org trixie/updates Release' does not have a Release file` | Vedi §6.1 |
 
 ### 6.1 Errore 100 — repository `trixie/updates` senza Release file
@@ -126,6 +140,10 @@ make config                 # rigenera config/ da auto/config
 sudo make distclean         # lb clean --purge (rimuove chroot/, cache/, .build/)
 sudo make build
 ```
+
+Se dopo `make build` il problema si ripresenta, allega l'output di
+`lb --version` e di `lb config --help | head -40`: serve a capire quali
+opzioni supporta la tua live-build.
 
 Se vuoi verificare cosa genera live-build, controlla:
 

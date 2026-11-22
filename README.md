@@ -166,6 +166,12 @@ in `auto/config` (`--security false`). Dopo un aggiornamento del progetto:
 `make config && sudo make distclean && sudo make build`.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.1.
 
+**`lb config: opzione non riconosciuta "--xxx"`?**
+`auto/config` passa solo le opzioni elencate da `lb config --help` della tua
+versione di live-build (le altre vengono saltate con un avviso). Se compare
+ancora questo errore, aggiorna il progetto (`git pull`) e fornisci l'output di
+`lb --version`.
+
 **Build fallisce con “lb: command not found”?**
 Installa `live-build` (vedi Requisiti) e ricompila da una directory pulita:
 `sudo make distclean && sudo make build`.

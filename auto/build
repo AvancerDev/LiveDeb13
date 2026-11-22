@@ -1,13 +1,28 @@
 #!/bin/sh
 # LiveDeb13 — build dell'ISO (richiede root)
 #
-# Rimuoviamo lo stage file `.build/config` prima di `lb build`: in questo modo
-# live-build riesegue sempre auto/config, quindi ogni modifica alla
-# configurazione (mirror, opzioni, nome immagine...) viene applicata.
-# Senza questa riga `lb build` salterebbe `auto/config` se `.build/config`
-# esiste già (tipico errore: "ho cambiato auto/config ma la build è identica").
+# 1) Rimuoviamo lo stage file `.build/config` prima di `lb build`: in questo
+#    modo live-build riesegue sempre auto/config, quindi ogni modifica alla
+#    configurazione (mirror, opzioni, ...) viene applicata.
+#    Senza questa riga `lb build` salterebbe `auto/config` se `.build/config`
+#    esiste già (tipico errore: "ho cambiato auto/config ma la build è identica").
+# 2) Se live-build non supporta --image-name, il nome dell'ISO è quello
+#    predefinito (live-image-amd64.hybrid.iso): la rinominiamo comunque in
+#    livedeb13-amd64.hybrid.iso, che è il nome atteso da Makefile e docs.
 set -e
 
 rm -f .build/config
 
-exec lb build noauto "$@"
+lb build noauto "$@"
+
+for f in live-image-amd64.hybrid.iso ./*.hybrid.iso; do
+  [ -f "$f" ] || continue
+  case "$f" in
+    ./livedeb13-amd64.hybrid.iso|livedeb13-amd64.hybrid.iso) ;;
+    *) mv -f "$f" livedeb13-amd64.hybrid.iso ;;
+  esac
+done
+
+if [ -f livedeb13-amd64.hybrid.iso ]; then
+  echo "==> ISO: livedeb13-amd64.hybrid.iso"
+fi

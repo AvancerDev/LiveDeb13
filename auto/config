@@ -1,22 +1,29 @@
-#!/bin/sh
+#!/bin/bash
 # LiveDeb13 — configurazione live-build per Debian 13 (trixie) amd64
-# Compatibile con live-build 4.x (trixie 20250505+deb13u1, testing 20250814)
 # Vedi: https://wiki.debian.org/Live/Build/GettingStarted
 #       https://manpages.debian.org/trixie/live-build/lb_config.1.en.html
 #
-# NOTA: in live-build 4.x le opzioni --hostname, --username, --locale,
-# --keyboard-layout, --timezone, --language, --user-password, --root-password
-# sono state RIMOSSE. Hostname/utente/locale si impostano con:
-#   - --bootappend-live (parametri kernel live-config)
-#   - config/includes.chroot/etc/hostname
-#   - config/hooks/ (locale, utente)
-#   - config/preseed/preseed.cfg (installer)
+# NOTA 1 — opzioni rimosse in live-build 4.x:
+#   --hostname, --username, --locale, --keyboard-layout, --timezone,
+#   --language, --user-password, --root-password non esistono più.
+#   Hostname/utente/locale si impostano con:
+#     - --bootappend-live (parametri kernel live-config)
+#     - config/includes.chroot/etc/hostname
+#     - config/hooks/ (locale, utente)
+#     - config/preseed/preseed.cfg (installer)
 #
-# NOTA APT / security (trixie):
+# NOTA 2 — compatibilità tra versioni di live-build:
+#   il set di opzioni accettate da `lb config` cambia da versione a versione.
+#   Questo script interroga `lb config --help` e passa SOLO le opzioni
+#   supportate dall'istanza di live-build installata (le altre vengono
+#   saltate con un avviso), così la configurazione non si rompe con
+#   "opzione non riconosciuta".
+#
+# NOTA 3 — APT / security (trixie):
 #   live-build genera da sé le righe di /etc/apt/sources.list a partire dai
-#   mirror impostati. Per la distribuzione "trixie" alcune versioni di
-#   live-build usano ancora il vecchio schema Debian (<dist>/updates) per il
-#   repository di sicurezza, producendo una riga non valida del tipo
+#   mirror impostati. Per "trixie" alcune versioni usano ancora il vecchio
+#   schema Debian (<dist>/updates) per il repository di sicurezza, producendo
+#   una riga non valida del tipo
 #       deb http://security.debian.org/ trixie/updates main
 #   che fa fallire 'apt update' con:
 #       E: The repository 'http://security.debian.org trixie/updates Release'
@@ -29,50 +36,84 @@
 #   e security.debian.org/debian-security per la suite trixie-security.
 set -e
 
+cd "$(dirname "$0")/.."
+
 # Rimuove i file di configurazione salvati da un'esecuzione precedente di
-# `lb config` (vedi lb_config(1): vanno eliminati prima di rigenerare, altrimenti
-# valori vecchi possono restare "congelati" nella configurazione).
+# `lb config` (vedi lb_config(1): vanno eliminati prima di rigenerare,
+# altrimenti valori vecchi possono restare "congelati" nella configurazione).
 # Le nostre directory (package-lists/, hooks/, includes.chroot/, archives/, ...)
 # non vengono toccate.
 rm -f config/binary config/bootstrap config/chroot config/common config/source config/image
 
-lb config noauto \
-  --distribution trixie \
-  --parent-distribution trixie \
-  --archive-areas "main contrib non-free non-free-firmware" \
-  --mirror-bootstrap http://deb.debian.org/debian/ \
-  --mirror-chroot http://deb.debian.org/debian/ \
-  --mirror-binary http://deb.debian.org/debian/ \
-  --mirror-chroot-security http://security.debian.org/debian-security/ \
-  --mirror-binary-security http://security.debian.org/debian-security/ \
-  --mirror-debian-installer http://deb.debian.org/debian/ \
-  --architecture amd64 \
-  --mode debian \
-  --system live \
-  --initsystem systemd \
-  --linux-packages linux-image \
-  --linux-flavours amd64 \
-  --initramfs live-boot \
-  --compression xz \
-  --binary-image iso-hybrid \
-  --image-name livedeb13 \
-  --iso-volume "LiveDeb13" \
-  --iso-application "Debian 13 Live Installer" \
-  --iso-publisher "LiveDeb13" \
-  --debian-installer live \
-  --debian-installer-distribution trixie \
-  --debian-installer-gui false \
-  --memtest memtest86+ \
-  --firmware-chroot true \
-  --firmware-binary true \
-  --security false \
-  --backports false \
-  --apt-source-archives false \
-  --apt-indices true \
-  --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30" \
-  --keyring-packages debian-archive-keyring \
-  --cache true \
-  --chroot-filesystem squashfs \
-  --binary-filesystem fat32 \
-  --bootappend-live "boot=live components hostname=livedeb13 username=user user-fullname=Live_User locales=it_IT.UTF-8 keyboard-layouts=it timezone=Europe/Rome" \
-  "$@"
+# Coppie "opzione valore" (tutte le opzioni usate qui richiedono un valore).
+ARGS=(
+  --distribution trixie
+  --parent-distribution trixie
+  --archive-areas "main contrib non-free non-free-firmware"
+  --mirror-bootstrap http://deb.debian.org/debian/
+  --mirror-chroot http://deb.debian.org/debian/
+  --mirror-binary http://deb.debian.org/debian/
+  --mirror-chroot-security http://security.debian.org/debian-security/
+  --mirror-binary-security http://security.debian.org/debian-security/
+  --mirror-debian-installer http://deb.debian.org/debian/
+  --architecture amd64
+  --mode debian
+  --system live
+  --initsystem systemd
+  --linux-packages linux-image
+  --linux-flavours amd64
+  --initramfs live-boot
+  --compression xz
+  --binary-image iso-hybrid
+  --image-name livedeb13
+  --iso-volume LiveDeb13
+  --iso-application "Debian 13 Live Installer"
+  --iso-publisher LiveDeb13
+  --debian-installer live
+  --debian-installer-distribution trixie
+  --debian-installer-gui false
+  --memtest memtest86+
+  --firmware-chroot true
+  --firmware-binary true
+  --security false
+  --backports false
+  --apt-source-archives false
+  --apt-indices true
+  --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30"
+  --keyring-packages debian-archive-keyring
+  --cache true
+  --chroot-filesystem squashfs
+  --binary-filesystem fat32
+  --bootappend-live "boot=live components hostname=livedeb13 username=user user-fullname=Live_User locales=it_IT.UTF-8 keyboard-layouts=it timezone=Europe/Rome"
+)
+
+# Elenco delle opzioni supportate da questa live-build (dall'help di `lb config`).
+LB_HELP="$(lb config --help 2>&1 || true)"
+
+# supported <opzione> → vero se l'opzione compare nell'help.
+supported() {
+  [ -n "${LB_HELP}" ] || return 0        # help non disponibile: non filtrare
+  printf '%s\n' "${LB_HELP}" | grep -qE -- "$1([[:space:]=]|$)"
+}
+
+FILTERED=()
+SKIPPED=()
+i=0
+while [ "${i}" -lt "${#ARGS[@]}" ]; do
+  OPT="${ARGS[$i]}"
+  VAL="${ARGS[$((i + 1))]}"
+  if supported "${OPT}"; then
+    FILTERED+=("${OPT}" "${VAL}")
+  else
+    SKIPPED+=("${OPT}")
+  fi
+  i=$((i + 2))
+done
+
+if [ "${#SKIPPED[@]}" -gt 0 ]; then
+  echo "ATTENZIONE: opzioni non supportate da questa versione di live-build, ignorate:"
+  echo "  ${SKIPPED[*]}"
+  echo "  (l'ISO userà i valori predefiniti per queste opzioni; vedi docs/BUILD.md)"
+fi
+
+lb config noauto "${FILTERED[@]}" "$@"
