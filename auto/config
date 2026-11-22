@@ -45,17 +45,22 @@ cd "$(dirname "$0")/.."
 # non vengono toccate.
 rm -f config/binary config/bootstrap config/chroot config/common config/source config/image
 
+# Mirror configurabili senza modificare lo script, es.:
+#   sudo env DEBIAN_MIRROR=http://ftp.it.debian.org/debian/ make build
+MIRROR="${DEBIAN_MIRROR:-http://deb.debian.org/debian/}"
+SECURITY_MIRROR="${DEBIAN_SECURITY_MIRROR:-http://security.debian.org/debian-security/}"
+
 # Coppie "opzione valore" (tutte le opzioni usate qui richiedono un valore).
 ARGS=(
   --distribution trixie
   --parent-distribution trixie
   --archive-areas "main contrib non-free non-free-firmware"
-  --mirror-bootstrap http://deb.debian.org/debian/
-  --mirror-chroot http://deb.debian.org/debian/
-  --mirror-binary http://deb.debian.org/debian/
-  --mirror-chroot-security http://security.debian.org/debian-security/
-  --mirror-binary-security http://security.debian.org/debian-security/
-  --mirror-debian-installer http://deb.debian.org/debian/
+  --mirror-bootstrap "${MIRROR}"
+  --mirror-chroot "${MIRROR}"
+  --mirror-binary "${MIRROR}"
+  --mirror-chroot-security "${SECURITY_MIRROR}"
+  --mirror-binary-security "${SECURITY_MIRROR}"
+  --mirror-debian-installer "${MIRROR}"
   --architecture amd64
   --mode debian
   --system live
@@ -81,7 +86,7 @@ ARGS=(
   --apt-indices true
   --apt-options "--option Acquire::Retries=3 --option Acquire::http::Timeout=30"
   --keyring-packages debian-archive-keyring
-  --cache true
+  --cache "${CACHE:-true}"
   --chroot-filesystem squashfs
   --binary-filesystem fat32
   --bootappend-live "boot=live components hostname=livedeb13 username=user user-fullname=Live_User locales=it_IT.UTF-8 keyboard-layouts=it timezone=Europe/Rome"

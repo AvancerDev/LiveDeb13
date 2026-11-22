@@ -166,6 +166,9 @@ in `auto/config` (`--security false`). Dopo un aggiornamento del progetto:
 `make config && sudo make distclean && sudo make build`.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.1.
 
+**`gzip: stdin: unexpected end of file` / `make: *** Errore 1`?**
+Di solito è un download troncato o una cache corrotta: `sudo make distclean && sudo rm -rf chroot binary cache .build && sudo env CACHE=false make build`. Per diagnosi: `sudo make debug` (log in `build.log`). Vedi [`docs/BUILD.md`](docs/BUILD.md) §6.2.
+
 **`lb config: opzione non riconosciuta "--xxx"`?**
 `auto/config` passa solo le opzioni elencate da `lb config --help` della tua
 versione di live-build (le altre vengono saltate con un avviso). Se compare

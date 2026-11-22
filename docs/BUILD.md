@@ -104,6 +104,7 @@ Verifica la chiavetta con `lsblk` prima di scrivere.
 | ISO non si avvia in UEFI | Disattiva Secure Boot oppure verifica OVMF; usa `make run-uefi` |
 | Build sporca / errori strani | `sudo make distclean && sudo make build` |
 | Pacchetto non trovato | Verifica nome in trixie e componenti in `auto/config` (`--archive-areas`) |
+| `gzip: stdin: unexpected end of file` / `Errore 1` generico | Vedi §6.2 (pulizia totale, `CACHE=false`, mirror alternativo, `make debug`) |
 | `lb config: opzione non riconosciuta "--xxx"` | `auto/config` filtra le opzioni non supportate; se l'errore compare, aggiorna il progetto (`git pull`) e riporta l'output di `lb --version` |
 | `E: The repository 'http://security.debian.org trixie/updates Release' does not have a Release file` | Vedi §6.1 |
 
@@ -144,6 +145,58 @@ sudo make build
 Se dopo `make build` il problema si ripresenta, allega l'output di
 `lb --version` e di `lb config --help | head -40`: serve a capire quali
 opzioni supporta la tua live-build.
+
+### 6.2 Altri errori generici (`Errore 1`, `gzip: stdin: unexpected end of file`)
+
+Sintomo tipico: la build si interrompe con `make: *** Errore 1` e, poco prima,
+messaggi come:
+
+```
+gzip: stdin: unexpected end of file
+P: Begin unmounting filesystems...
+P: Saving caches...
+Reading package lists... Done
+```
+
+Sono quasi sempre **file scaricati troncati** (rete instabile, proxy, mirror
+lento) oppure **cache corrotta** rimasta da una build precedente. Rimedi, in
+ordine:
+
+1. **Pulizia totale** (elimina chroot, cache e indici parziali):
+
+   ```bash
+   sudo make distclean
+   sudo rm -rf chroot binary cache .build
+   ```
+
+2. **Build con cache disattivata** (riscarica tutto, niente dati vecchi):
+
+   ```bash
+   sudo env CACHE=false make build
+   ```
+
+3. **Mirror diverso** (es. mirror italiano, spesso più veloce dall'Italia):
+
+   ```bash
+   sudo env DEBIAN_MIRROR=http://ftp.it.debian.org/debian/ make build
+   ```
+
+   Per cambiare in modo permanente il mirror di sicurezza modifica
+   `config/archives/livedeb13-security.list`.
+
+4. **Log completo per diagnosi**:
+
+   ```bash
+   sudo make debug          # scrive tutto in build.log
+   ```
+
+   Da allegare in caso di segnalazione, insieme a:
+
+   ```bash
+   lb --version
+   tail -80 build.log
+   grep -nE "^(E:|W:)" build.log | tail -30
+   ```
 
 Se vuoi verificare cosa genera live-build, controlla:
 

@@ -13,7 +13,7 @@ QEMU_KVM := $(shell [ -w /dev/kvm ] && echo "-enable-kvm")
 OVMF_CODE := $(firstword $(wildcard /usr/share/OVMF/OVMF_CODE_4M.fd /usr/share/OVMF/OVMF_CODE.fd))
 OVMF_VARS_SRC := $(firstword $(wildcard /usr/share/OVMF/OVMF_VARS_4M.fd /usr/share/OVMF/OVMF_VARS.fd))
 
-.PHONY: help config build clean distclean run run-uefi usb check iso
+.PHONY: help config build debug clean distclean run run-uefi usb check iso
 
 help: ## Mostra questo help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -31,6 +31,9 @@ clean: ## Pulisce gli artefatti di build (lb clean)
 
 distclean: ## Pulizia completa (lb clean --purge: rimuove anche cache e stage)
 	sudo ./auto/clean --purge
+
+debug: ## Build con log completo in build.log (da allegare in caso di errore)
+	sudo ./auto/build --debug 2>&1 | tee build.log; exit $${PIPESTATUS[0]}
 
 iso: build ## Alias di build + mostra info ISO
 	@echo "ISO pronta: $(ISO)"

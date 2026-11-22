@@ -4,8 +4,6 @@
 # 1) Rimuoviamo lo stage file `.build/config` prima di `lb build`: in questo
 #    modo live-build riesegue sempre auto/config, quindi ogni modifica alla
 #    configurazione (mirror, opzioni, ...) viene applicata.
-#    Senza questa riga `lb build` salterebbe `auto/config` se `.build/config`
-#    esiste già (tipico errore: "ho cambiato auto/config ma la build è identica").
 # 2) Se live-build non supporta --image-name, il nome dell'ISO è quello
 #    predefinito (live-image-amd64.hybrid.iso): la rinominiamo comunque in
 #    livedeb13-amd64.hybrid.iso, che è il nome atteso da Makefile e docs.
@@ -13,7 +11,30 @@ set -e
 
 rm -f .build/config
 
-lb build noauto "$@"
+if ! lb build noauto "$@"; then
+  cat >&2 <<'EOF'
+
+================= BUILD FALLITA =================
+Suggerimenti rapidi (dettagli in docs/BUILD.md §6):
+
+1) Pulizia totale e nuovo tentativo:
+     sudo make distclean
+     sudo rm -rf chroot binary cache .build
+     sudo make build
+
+2) Errori tipo "gzip: stdin: unexpected end of file" (file scaricati
+   troncati / cache corrotta) → riscarica tutto senza cache:
+     sudo env CACHE=false make build
+
+3) Mirror alternativo (es. italiano):
+     sudo env DEBIAN_MIRROR=http://ftp.it.debian.org/debian/ make build
+
+4) Log completo da allegare:
+     sudo make debug        # genera build.log
+=================================================
+EOF
+  exit 1
+fi
 
 for f in live-image-amd64.hybrid.iso ./*.hybrid.iso; do
   [ -f "$f" ] || continue

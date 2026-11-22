@@ -12,6 +12,7 @@ binary/
 *.packages
 *.build.log
 *.buildlog
+build.log
 
 # Cache e temporanei
 *.tmp
