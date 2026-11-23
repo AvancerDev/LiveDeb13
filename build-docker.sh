@@ -1,5 +1,5 @@
 #!/bin/bash
-# LiveDeb13 — build dell'ISO in un container Debian 13 (trixie).
+# ZinimalOS — build dell'ISO in un container Debian 13 (trixie).
 #
 # Serve quando l'host NON è Debian 13: per esempio Ubuntu, dove il pacchetto
 # live-build è fermo alla 3.0~a57 (epoca Debian 7) e non può costruire trixie.
@@ -152,12 +152,12 @@ fi
 
 # --- Build -------------------------------------------------------------------
 echo "==> Build in container debian:trixie con $RUNTIME (può durare 10-30 minuti)..."
-echo "    ISO finale: livedeb13-amd64.hybrid.iso"
+echo "    ISO finale: zinimalos-amd64.hybrid.iso"
 echo "    Log completo: build.log"
 set +e
 ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
   -e DEBIAN_FRONTEND=noninteractive \
-  -e LIVEDEB13_IN_CONTAINER=1 \
+  -e ZINIMALOS_IN_CONTAINER=1 \
   -e LB_ARGS="${LB_ARGS[*]:-}" \
   -e HOST_UID="$HOST_UID" -e HOST_GID="$HOST_GID" \
   debian:trixie bash -c "
@@ -219,8 +219,8 @@ HINT
 fi
 
 echo
-if [ -f livedeb13-amd64.hybrid.iso ]; then
-  echo "==> OK: livedeb13-amd64.hybrid.iso ($(du -h livedeb13-amd64.hybrid.iso | cut -f1))"
+if [ -f zinimalos-amd64.hybrid.iso ]; then
+  echo "==> OK: zinimalos-amd64.hybrid.iso ($(du -h zinimalos-amd64.hybrid.iso | cut -f1))"
 else
   echo "ERRORE: ISO non generata (vedi output sopra)." >&2
   exit 1

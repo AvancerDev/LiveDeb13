@@ -1,9 +1,9 @@
-Benvenuto su LiveDeb13 — Debian 13 (trixie) Minimal Live + Installer
+Benvenuto su ZinimalOS — Debian 13 (trixie) Minimal Live + Installer
 =====================================================================
 
 Utente live:  user / live   (sudo senza password)
-Installer:    esegui `livedeb13-install` oppure scegli "Install" dal menu di avvio
-Info sistema: `livedeb13-info`  |  banner: `fastfetch`
-Crediti:      `made by`  →  AvancerDev / LiveDeb13
+Installer:    esegui `zinimalos-install` oppure scegli "Install" dal menu di avvio
+Info sistema: `zinimalos-info`  |  banner: `fastfetch`
+Crediti:      `made by`  →  AvancerDev / ZinimalOS
 
-Documentazione: https://wiki.debian.org/  |  Progetto: LiveDeb13
+Documentazione: https://wiki.debian.org/  |  Progetto: ZinimalOS

@@ -1,4 +1,8 @@
-# LiveDeb13 — Debian 13 (trixie) Minimal Live + Installer
+<p align="center">
+  <img src="docs/images/zinimalos-logo.png" alt="ZinimalOS" width="220">
+</p>
+
+# ZinimalOS — Debian 13 (trixie) Minimal Live + Installer
 
 Fork minimale di **Debian 13 “trixie”** basato su [`live-build`](https://wiki.debian.org/Live/Build/GettingStarted).
 
@@ -39,8 +43,8 @@ sudo apt install -y live-build debootstrap squashfs-tools xorriso isolinux \
 ## Quick start
 
 ```bash
-git clone https://github.com/AvancerDev/LiveDeb13.git
-cd LiveDeb13
+git clone https://github.com/AvancerDev/ZinimalOS.git
+cd ZinimalOS
 
 # 1. Configura (genera config/ da auto/config)
 make config
@@ -51,7 +55,7 @@ sudo make build
 # oppure: sudo ./auto/build
 
 # L’ISO si trova nella radice del progetto:
-ls -lh livedeb13-amd64.hybrid.iso
+ls -lh zinimalos-amd64.hybrid.iso
 ```
 
 ### Test rapido in VM (QEMU)
@@ -65,7 +69,7 @@ make run-uefi   # UEFI (richiede OVMF)
 
 ```bash
 # Sostituisci /dev/sdX con la tua chiavetta (ATTENZIONE: cancella tutto!)
-sudo dd if=livedeb13-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=zinimalos-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 Oppure con `Ventoy`, `balenaEtcher`, `GNOME Disks`, ecc.
@@ -85,8 +89,9 @@ Oppure con `Ventoy`, `balenaEtcher`, `GNOME Disks`, ecc.
 | Rete | NetworkManager + iwd + wpasupplicant (Wi-Fi e Ethernet) |
 | Firmware | `firmware-linux`, microcode Intel/AMD |
 | Tools | `nano`, `vim-tiny`, `htop`, `tmux`, `curl`, `wget`, `openssh-server`, `mc`, `parted`, `cryptsetup`, `lvm2`, … |
-| Banner | `fastfetch` con logo e info di sistema, mostrato all’accesso |
-| Crediti | comando `made by` → creatore (`AvancerDev`) e progetto (`LiveDeb13`) |
+| Logo | `Z` blu su `usr/share/zinimalos/logo.png`, versione ASCII a colori all’accesso |
+| Banner | `fastfetch` con info di sistema, mostrato all’accesso |
+| Crediti | comando `made by` → creatore (`AvancerDev`) e progetto (`ZinimalOS`) |
 
 Vedi `config/package-lists/` per l’elenco completo e modificabile.
 
@@ -101,12 +106,13 @@ Tutto si modifica senza toccare `auto/config` (che è solo un wrapper di `lb con
 | Pacchetti live | `config/package-lists/packages.list.chroot` |
 | Pacchetti installati sul target | `config/package-lists/packages.list.chroot_install` |
 | Hostname, MOTD | `config/includes.chroot/etc/` |
-| Sorgenti APT (sicurezza) | `config/archives/livedeb13-security.list` |
+| Sorgenti APT (sicurezza) | `config/archives/zinimalos-security.list` |
 | Utente live, locale | `config/hooks/live/` |
 | Preseed installer | `config/preseed/preseed.cfg` |
 | Script extra | `config/includes.chroot/usr/local/bin/` |
+| Logo (PNG + ASCII) | `config/includes.chroot/usr/share/zinimalos/` |
 | Banner `fastfetch` | `config/includes.chroot/etc/fastfetch/config.jsonc` |
-| Crediti `made by` | `config/includes.chroot/etc/livedeb13-release` |
+| Crediti `made by` | `config/includes.chroot/etc/zinimalos-release` |
 
 Guida completa: [`docs/CUSTOMIZE.md`](docs/CUSTOMIZE.md) ·
 Build & test: [`docs/BUILD.md`](docs/BUILD.md)
@@ -125,9 +131,9 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 │   ├── package-lists/     # Elenchi pacchetti (.chroot / .chroot_install)
 │   ├── includes.chroot/   # File copiati nel live system
 │   │   ├── etc/fastfetch/          # banner fastfetch
-│   │   ├── etc/livedeb13-release   # credito/versione (comando `made by`)
+│   │   ├── etc/zinimalos-release   # credito/versione (comando `made by`)
 │   │   ├── etc/profile.d/          # welcome all'accesso
-│   │   └── usr/local/bin/          # made, made-by, livedeb13-*
+│   │   └── usr/local/bin/          # made, made-by, zinimalos-*
 │   ├── includes.binary/   # File copiati nella ISO (bootloader, splash…)
 │   ├── hooks/             # Script chroot/live eseguiti in build
 │   ├── preseed/           # preseed.cfg per Debian Installer
@@ -174,7 +180,7 @@ Vedi `docs/CUSTOMIZE.md`.
 **Build fallisce con “Errore 100” e `trixie/updates Release` non trovato?**
 È il vecchio schema del repository di sicurezza generato da alcune versioni di
 live-build per `trixie`. In questo progetto la riga è fornita esplicitamente da
-`config/archives/livedeb13-security.list` (suite `trixie-security` su
+`config/archives/zinimalos-security.list` (suite `trixie-security` su
 `security.debian.org/debian-security`) e la generazione automatica è disattivata
 in `auto/config` (`--security false`). Dopo un aggiornamento del progetto:
 `make config && sudo make distclean && sudo make build`.
@@ -189,21 +195,21 @@ sudo apt install docker.io
 ./build-docker.sh          # oppure: make docker
 ```
 
-In alternativa compila la ISO con GitHub Actions (Actions → Build LiveDeb13 ISO
+In alternativa compila la ISO con GitHub Actions (Actions → Build ZinimalOS ISO
 → Run workflow) oppure installa la live-build di Debian sull'host.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.3 e §8.
 
 **Non riesco a scaricare l’ISO dalla CI (`fatal: .git non è un repository Git`
 oppure `unzip: cannot find …zip`)?**
 `gh run download` va lanciato **dentro il repo** (oppure con
-`-R AvancerDev/LiveDeb13`): fuori da Git non sa quale repository interrogare.
+`-R AvancerDev/ZinimalOS`): fuori da Git non sa quale repository interrogare.
 Inoltre scarica **ed estrae** l’artifact, quindi lo `unzip` non serve — con `-n`
 l’ISO finisce nella directory corrente:
 
 ```bash
-cd ~/LiveDeb13
-gh run download 45041861620 -n livedeb13-amd64-arena-e324deaa-livedeb13
-ls -lh livedeb13-amd64.hybrid.iso
+cd ~/ZinimalOS
+gh run download 45041861620 -n zinimalos-amd64-arena-e324deaa-zinimalos
+ls -lh zinimalos-amd64.hybrid.iso
 ```
 
 Dall’interfaccia web invece si scarica uno `.zip` da estrarre a mano.

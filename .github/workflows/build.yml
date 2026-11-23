@@ -1,4 +1,4 @@
-name: Build LiveDeb13 ISO
+name: Build ZinimalOS ISO
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
       options: --privileged
     env:
       DEBIAN_FRONTEND: noninteractive
-      ISO_NAME: livedeb13-amd64.hybrid.iso
+      ISO_NAME: zinimalos-amd64.hybrid.iso
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
         run: |
           suffix="$(printf '%s' '${{ github.head_ref || github.ref_name }}' | tr '/' '-')"
           echo "ART_SUFFIX=${suffix}" >> "$GITHUB_ENV"
-          echo "Artifact: livedeb13-amd64-${suffix}"
+          echo "Artifact: zinimalos-amd64-${suffix}"
 
       - name: Spazio disco disponibile
         run: df -h / | sed 's/^/  /'
@@ -107,7 +107,7 @@ jobs:
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
-          name: livedeb13-amd64-${{ env.ART_SUFFIX }}
+          name: zinimalos-amd64-${{ env.ART_SUFFIX }}
           path: ${{ env.ISO_NAME }}
           retention-days: 30
           compression-level: 0

@@ -1,4 +1,4 @@
-# Build & Test — LiveDeb13
+# Build & Test — ZinimalOS
 
 ## 1. Prerequisiti (Debian 13 trixie)
 
@@ -43,7 +43,7 @@ ATTENZIONE: opzioni non supportate da questa versione di live-build, ignorate:
 
 Se viene saltata `--image-name`, l'ISO prodotta da live-build si chiama
 `live-image-amd64.hybrid.iso`: `auto/build` la rinomina comunque in
-`livedeb13-amd64.hybrid.iso`.
+`zinimalos-amd64.hybrid.iso`.
 
 ## 3. Build
 
@@ -53,7 +53,7 @@ sudo make build
 ```
 
 - Durata tipica: 10–30 minuti (dipende da rete/CPU).
-- Output: `livedeb13-amd64.hybrid.iso` (nella radice del progetto)
+- Output: `zinimalos-amd64.hybrid.iso` (nella radice del progetto)
 - Log: `*.build.log` nella root del progetto.
 
 Pulizia:
@@ -80,14 +80,14 @@ make run-uefi
 Test manuale con QEMU (esempio):
 
 ```bash
-qemu-system-x86_64 -m 2048 -cdrom livedeb13-amd64.hybrid.iso -boot d -enable-kvm
+qemu-system-x86_64 -m 2048 -cdrom zinimalos-amd64.hybrid.iso -boot d -enable-kvm
 ```
 
 ## 5. Scrittura su USB
 
 ```bash
 # ATTENZIONE: sostituisci /dev/sdX con la chiavetta corretta!
-sudo dd if=livedeb13-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=zinimalos-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 Oppure:
@@ -137,7 +137,7 @@ Soluzione già applicata in questo progetto:
    e i mirror di sicurezza corretti
    (`--mirror-chroot-security`/`--mirror-binary-security` →
    `http://security.debian.org/debian-security/`);
-2. il repository corretto è fornito da `config/archives/livedeb13-security.list`
+2. il repository corretto è fornito da `config/archives/zinimalos-security.list`
    (usato nel chroot di build **e** nel sistema live).
 
 Dopo aver aggiornato il progetto è **obbligatorio** rigenerare la configurazione
@@ -189,7 +189,7 @@ ordine:
    ```
 
    Per cambiare in modo permanente il mirror di sicurezza modifica
-   `config/archives/livedeb13-security.list`.
+   `config/archives/zinimalos-security.list`.
 
 4. **Log completo per diagnosi**:
 
@@ -391,7 +391,7 @@ Rimedio (una volta sola, dalla radice del progetto):
 ```bash
 sudo chown -R "$USER:$USER" .          # oppure: sudo chown -R "$USER:$USER" config
 git fetch origin
-git reset --hard origin/arena/e324deaa-livedeb13
+git reset --hard origin/arena/e324deaa-zinimalos
 ```
 
 Da questa versione `./build-docker.sh` restituisce `config/`, `chroot/`,
@@ -416,7 +416,7 @@ subito, prima di fare qualsiasi cosa.
 Rimedio (2 secondi, non riscarica nulla):
 
 ```bash
-cd ~/LiveDeb13
+cd ~/ZinimalOS
 rm -f .lock
 ./build-docker.sh --reset
 ```
@@ -431,37 +431,37 @@ Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`
 (container `--privileged`, live-build 20250505+deb13u1). Ogni PR esegue la build:
 l’ISO compare come **artifact** della run.
 
-Scaricare l’ISO (artifact `livedeb13-amd64-<branch>`):
+Scaricare l’ISO (artifact `zinimalos-amd64-<branch>`):
 
 - **interfaccia web**: PR (o Actions) → run → sezione *Artifacts* → clic sul
   nome dell’artifact. Si scarica uno `.zip`: va estratto (dentro c’è
-  `livedeb13-amd64.hybrid.iso`).
+  `zinimalos-amd64.hybrid.iso`).
 - **da terminale** (con `gh`, consigliato): `gh run download` scarica **ed
   estrae** l’artifact, quindi **non serve `unzip`**. Con `-n` (un solo
   artifact) i file finiscono nella directory corrente:
 
   ```bash
-  cd ~/LiveDeb13                       # dentro il repo, altrimenti errore
+  cd ~/ZinimalOS                       # dentro il repo, altrimenti errore
   gh run list --limit 5                # trova il <RUN_ID> verde
-  gh run download <RUN_ID> -n livedeb13-amd64-arena-e324deaa-livedeb13
-  ls -lh livedeb13-amd64.hybrid.iso    # ~1.5 GB
-  sha256sum livedeb13-amd64.hybrid.iso
+  gh run download <RUN_ID> -n zinimalos-amd64-arena-e324deaa-zinimalos
+  ls -lh zinimalos-amd64.hybrid.iso    # ~1.5 GB
+  sha256sum zinimalos-amd64.hybrid.iso
   ```
 
   Se non sei dentro il repo (`fatal: .git non è un repository Git`), indica il
   repository esplicitamente:
 
   ```bash
-  gh run download <RUN_ID> -R AvancerDev/LiveDeb13 \
-     -n livedeb13-amd64-arena-e324deaa-livedeb13 -D ~/Downloads
+  gh run download <RUN_ID> -R AvancerDev/ZinimalOS \
+     -n zinimalos-amd64-arena-e324deaa-zinimalos -D ~/Downloads
   ```
 
   `-D`/`--dir` esiste da `gh` 2.28: con versioni più vecchie fai `cd` nella
   directory di destinazione e ometti `-D`.
 
   Nome dell’artifact per ogni branch (controllalo in *Artifacts*, il suffisso
-  cambia): `livedeb13-amd64-${branch con '/' → '-'}`; su `main` e sui tag è
-  `livedeb13-amd64-main` / `livedeb13-amd64-v1.0.0`.
+  cambia): `zinimalos-amd64-${branch con '/' → '-'}`; su `main` e sui tag è
+  `zinimalos-amd64-main` / `zinimalos-amd64-v1.0.0`.
 
 - **senza `gh`, via API** (richiede un token GitHub):
 
@@ -469,12 +469,12 @@ Scaricare l’ISO (artifact `livedeb13-amd64-<branch>`):
   gh auth token > token.txt        # oppure un PAT con scope repo
   curl -L -H "Authorization: token $(cat token.txt)" \
     -o iso.zip \
-    https://api.github.com/repos/AvancerDev/LiveDeb13/actions/artifacts/<ARTIFACT_ID>/zip
+    https://api.github.com/repos/AvancerDev/ZinimalOS/actions/artifacts/<ARTIFACT_ID>/zip
   unzip iso.zip
   ```
 
   L’`<ARTIFACT_ID>` si legge dall’interfaccia web (URL dell’artifact) o con
-  `gh api repos/AvancerDev/LiveDeb13/actions/runs/<RUN_ID>/artifacts`.
+  `gh api repos/AvancerDev/ZinimalOS/actions/runs/<RUN_ID>/artifacts`.
 
 In caso di errore, il workflow commenta automaticamente la PR con le ultime
 200 righe di `build.log`, così la diagnosi non richiede di scaricare nulla.
@@ -512,7 +512,7 @@ Lo script:
 - installa `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, i
   bootloader e i firmware necessari;
 - esegue `./auto/config` e `./auto/build`;
-- lascia la ISO in `livedeb13-amd64.hybrid.iso` e riporta i file generati in
+- lascia la ISO in `zinimalos-amd64.hybrid.iso` e riporta i file generati in
   proprietà all'utente host.
 
 La prima esecuzione scarica l'immagine `debian:trixie` (~120 MB) e richiede
@@ -520,9 +520,9 @@ La prima esecuzione scarica l'immagine `debian:trixie` (~120 MB) e richiede
 
 ### 8.2 GitHub Actions (nessuna installazione locale)
 
-Nel repository: scheda **Actions** → **Build LiveDeb13 ISO** →
+Nel repository: scheda **Actions** → **Build ZinimalOS ISO** →
 **Run workflow** (scegli la tua branch). Al termine scarica l'artifact
-`livedeb13-amd64-<branch>`, che contiene la ISO.
+`zinimalos-amd64-<branch>`, che contiene la ISO.
 
 > Il workflow è eseguibile da qui solo dopo che `.github/workflows/build.yml`
 > è presente sul branch di default (`main`): se "Run workflow" non compare,
@@ -541,7 +541,7 @@ sudo apt install ./live-build_20250505+deb13u1_all.deb
 hash -r
 lb --version          # deve mostrare 20250505+deb13u1
 
-cd ~/LiveDeb13
+cd ~/ZinimalOS
 sudo make distclean
 sudo make build
 ```

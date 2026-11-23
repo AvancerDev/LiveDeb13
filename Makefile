@@ -1,12 +1,12 @@
-# LiveDeb13 — Makefile
+# ZinimalOS — Makefile
 # Wrapper comodo attorno a live-build (lb). La build richiede root.
 #
-# L'ISO prodotta da live-build (--binary-image iso-hybrid, --image-name livedeb13)
-# si trova nella radice del progetto: livedeb13-amd64.hybrid.iso
+# L'ISO prodotta da live-build (--binary-image iso-hybrid, --image-name zinimalos)
+# si trova nella radice del progetto: zinimalos-amd64.hybrid.iso
 
 SHELL := /bin/bash
 LB := lb
-ISO := livedeb13-amd64.hybrid.iso
+ISO := zinimalos-amd64.hybrid.iso
 
 # Usa KVM solo se disponibile, altrimenti QEMU va in emulazione (lento ma funziona)
 QEMU_KVM := $(shell [ -w /dev/kvm ] && echo "-enable-kvm")
@@ -50,10 +50,10 @@ run: iso ## Avvia l'ISO in QEMU (BIOS)
 
 run-uefi: iso ## Avvia l'ISO in QEMU (UEFI, richiede OVMF)
 	@if [ -z "$(OVMF_CODE)" ] || [ -z "$(OVMF_VARS_SRC)" ]; then echo "ERRORE: OVMF non trovato (sudo apt install ovmf)"; exit 1; fi
-	cp "$(OVMF_VARS_SRC)" /tmp/OVMF_VARS_livedeb13.fd
+	cp "$(OVMF_VARS_SRC)" /tmp/OVMF_VARS_zinimalos.fd
 	qemu-system-x86_64 -m 2048 -cdrom $(ISO) -boot d $(QEMU_KVM) \
 	  -drive if=pflash,format=raw,readonly=on,file=$(OVMF_CODE) \
-	  -drive if=pflash,format=raw,file=/tmp/OVMF_VARS_livedeb13.fd
+	  -drive if=pflash,format=raw,file=/tmp/OVMF_VARS_zinimalos.fd
 
 usb: iso ## Scrive l'ISO su USB (USB=/dev/sdX make usb)
 	@if [ -z "$(USB)" ]; then echo "Uso: USB=/dev/sdX make usb"; exit 1; fi

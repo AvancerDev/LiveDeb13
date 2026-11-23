@@ -1,5 +1,5 @@
 #!/bin/bash
-# LiveDeb13 — script di build comodo (alternativa a `make build`)
+# ZinimalOS — script di build comodo (alternativa a `make build`)
 # Uso: ./build.sh [--clean] [--config-only]
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -42,7 +42,7 @@ fi
 echo "==> Build ISO (lb build)..."
 ./auto/build "$@"
 
-ISO="livedeb13-amd64.hybrid.iso"
+ISO="zinimalos-amd64.hybrid.iso"
 if [ -f "$ISO" ]; then
   echo "==> OK: $ISO ($(du -h "$ISO" | cut -f1))"
 else

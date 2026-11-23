@@ -1,5 +1,5 @@
 #!/bin/bash
-# LiveDeb13 — configurazione live-build per Debian 13 (trixie) amd64
+# ZinimalOS — configurazione live-build per Debian 13 (trixie) amd64
 # Vedi: https://wiki.debian.org/Live/Build/GettingStarted
 #       https://manpages.debian.org/trixie/live-build/lb_config.1.en.html
 #
@@ -30,7 +30,7 @@
 #          does not have a Release file.
 #   Per evitarlo disattiviamo la generazione automatica (--security false) e
 #   forniamo noi il repository corretto tramite
-#       config/archives/livedeb13-security.list
+#       config/archives/zinimalos-security.list
 #   (usato sia nel chroot di build sia nel sistema live).
 #   Riferimento: Debian 13 usa deb.debian.org/debian per trixie/trixie-updates
 #   e security.debian.org/debian-security per la suite trixie-security.
@@ -40,7 +40,7 @@ cd "$(dirname "$0")/.."
 
 # --- Versione del progetto (utile per capire se l'albero è aggiornato) -------
 if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
-  printf 'LiveDeb13: %s [%s]\n' \
+  printf 'ZinimalOS: %s [%s]\n' \
     "$(git log -1 --format='%h %s' 2>/dev/null || echo '?')" \
     "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
 fi
@@ -102,8 +102,8 @@ A) Build in un container Debian 13 (non tocca il sistema host, ambiente
      # con pulizia preventiva: ./build-docker.sh --clean
 
 B) Build su GitHub Actions (nessuna installazione locale):
-   tab "Actions" -> "Build LiveDeb13 ISO" -> "Run workflow" sulla tua branch,
-   poi scarica l'artifact "livedeb13-amd64-<branch>" (contiene la ISO).
+   tab "Actions" -> "Build ZinimalOS ISO" -> "Run workflow" sulla tua branch,
+   poi scarica l'artifact "zinimalos-amd64-<branch>" (contiene la ISO).
 
 C) Installare la live-build di Debian sul sistema (Ubuntu: miscela non
    supportata, ma e' solo shell + debootstrap):
@@ -171,10 +171,10 @@ ARGS=(
   --initramfs live-boot
   --compression xz
   --binary-image iso-hybrid
-  --image-name livedeb13
-  --iso-volume LiveDeb13
+  --image-name zinimalos
+  --iso-volume ZinimalOS
   --iso-application "Debian 13 Live Installer"
-  --iso-publisher LiveDeb13
+  --iso-publisher ZinimalOS
   --debian-installer live
   --debian-installer-distribution trixie
   --debian-installer-gui false
@@ -190,7 +190,7 @@ ARGS=(
   --cache "${CACHE:-true}"
   --chroot-filesystem squashfs
   --binary-filesystem fat32
-  --bootappend-live "boot=live components hostname=livedeb13 username=user user-fullname=Live_User locales=it_IT.UTF-8 keyboard-layouts=it timezone=Europe/Rome"
+  --bootappend-live "boot=live components hostname=zinimalos username=user user-fullname=Live_User locales=it_IT.UTF-8 keyboard-layouts=it timezone=Europe/Rome"
 )
 
 # Elenco delle opzioni supportate da questa live-build (dall'help di `lb config`).

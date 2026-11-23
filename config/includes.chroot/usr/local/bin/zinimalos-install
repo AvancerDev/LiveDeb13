@@ -1,5 +1,5 @@
 #!/bin/sh
-# LiveDeb13 — scorciatoia per avviare Debian Installer dal live
+# ZinimalOS — scorciatoia per avviare Debian Installer dal live
 set -eu
 echo "Avvio Debian Installer (modalità testuale)..."
 echo "Se l'installer non parte, usa il menu di avvio: 'Install'."

@@ -1,4 +1,4 @@
-# LiveDeb13 — pacchetti installati sul sistema TARGET (dopo Debian Installer)
+# ZinimalOS — pacchetti installati sul sistema TARGET (dopo Debian Installer)
 # Questi pacchetti vengono installati sul disco di destinazione.
 # Mantenerli minimali: solo console, niente desktop.
 

@@ -1,4 +1,4 @@
-# LiveDeb13 — repository di sicurezza Debian 13 (trixie)
+# ZinimalOS — repository di sicurezza Debian 13 (trixie)
 #
 # live-build, per la suite "trixie", può generare una riga di sicurezza con il
 # vecchio schema <dist>/updates (es. "trixie/updates"), che non esiste su
@@ -6,7 +6,7 @@
 # generazione automatica è disattivata (--security false) e il repository
 # corretto viene fornito da questo file.
 #
-# Il file viene installato in /etc/apt/sources.list.d/livedeb13-security.list
+# Il file viene installato in /etc/apt/sources.list.d/zinimalos-security.list
 # sia nel chroot di build sia nel sistema live.
 #
 # NOTA: niente riga deb-src (le sorgenti non servono per una live);

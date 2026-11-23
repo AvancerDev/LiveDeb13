@@ -1,7 +1,7 @@
 #!/bin/sh
-# LiveDeb13 — mostra informazioni sul sistema live
+# ZinimalOS — mostra informazioni sul sistema live
 set -eu
-echo "=== LiveDeb13 — Debian 13 (trixie) Minimal ==="
+echo "=== ZinimalOS — Debian 13 (trixie) Minimal ==="
 echo "Hostname:  $(hostname)"
 echo "Kernel:    $(uname -r)"
 echo "Arch:      $(uname -m)"
@@ -11,8 +11,8 @@ echo "Disco:     $(df -h / | awk 'NR==2 {print $4\" liberi su \"$2}')"
 echo "Utente:    $(whoami)"
 echo ""
 echo "Comandi utili:"
-echo "  livedeb13-install   Avvia Debian Installer"
-echo "  made by             Crediti del progetto (AvancerDev / LiveDeb13)"
+echo "  zinimalos-install   Avvia Debian Installer"
+echo "  made by             Crediti del progetto (AvancerDev / ZinimalOS)"
 echo "  fastfetch           Banner con logo e info di sistema"
 echo "  sudo apt update     Aggiorna i pacchetti (live)"
 echo "  lsblk               Dischi e partizioni"

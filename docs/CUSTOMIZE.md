@@ -1,4 +1,4 @@
-# Personalizzazione — LiveDeb13
+# Personalizzazione — ZinimalOS
 
 Tutto si personalizza modificando i file in `config/` (nessuna modifica a `auto/config`
 salvo per mirror/distribuzione).
@@ -39,10 +39,10 @@ I mirror principali si impostano in `auto/config` (`--mirror-bootstrap`,
 Il repository di **sicurezza** invece è fornito esplicitamente da:
 
 ```
-config/archives/livedeb13-security.list
+config/archives/zinimalos-security.list
 ```
 
-Questo file viene installato come `/etc/apt/sources.list.d/livedeb13-security.list`
+Questo file viene installato come `/etc/apt/sources.list.d/zinimalos-security.list`
 **sia nel chroot di build sia nel sistema live**. In `auto/config` la generazione
 automatica della riga di sicurezza è disattivata (`--security false`), perché per
 `trixie` alcune versioni di live-build producono ancora il vecchio schema
@@ -98,23 +98,40 @@ Metti script in:
 config/includes.chroot/usr/local/bin/
 ```
 
-Saranno disponibili nel live come comandi (`livedeb13-info`, ecc.).
+Saranno disponibili nel live come comandi (`zinimalos-info`, ecc.).
 Assicurati che siano eseguibili:
 
 ```bash
 chmod +x config/includes.chroot/usr/local/bin/mio-script
 ```
 
+## Logo di sistema
+
+| Cosa | File |
+|---|---|
+| Logo PNG (512×512) | `config/includes.chroot/usr/share/zinimalos/logo.png` |
+| Logo ASCII (console) | `config/includes.chroot/usr/share/zinimalos/logo-ascii.txt` |
+| Schermata pre-login (`/etc/issue`) | `config/includes.chroot/etc/issue` |
+| Anteprima per il README | `docs/images/zinimalos-logo.png` |
+
+Per sostituire il logo: rimpiazza `logo.png` (meglio ≤ 512×512, PNG, con
+`-colors 128` per non gonfiare l’ISO) e, se vuoi cambiare anche l’arte su
+console, `logo-ascii.txt` (ogni riga è stampata così com’è; meglio restare
+sotto le 40 colonne di larghezza).
+
+`/etc/issue` è ciò che `agetty` mostra **prima** del login, quindi il logo
+compare già sulla schermata di accesso, senza attendere il banner.
+
 ## Banner fastfetch all’accesso
 
 Il pacchetto `fastfetch` è incluso (in `packages.list.chroot` e
-`packages.list.chroot_install`) e all’accesso sulla console viene mostrato un
-banner con logo Debian e info di sistema.
+`packages.list.chroot_install`): all’accesso lo script di welcome stampa prima
+il logo ASCII a colori, poi le info di sistema.
 
 | Cosa | File |
 |---|---|
 | Configurazione (moduli, ordine, righe custom) | `config/includes.chroot/etc/fastfetch/config.jsonc` |
-| Script che lo lancia al login | `config/includes.chroot/etc/profile.d/00-livedeb13-welcome.sh` |
+| Script che stampa logo + banner | `config/includes.chroot/etc/profile.d/00-zinimalos-welcome.sh` |
 
 Personalizzare i moduli: modifica l’array `modules` nel `.jsonc`. Per esempio
 per aggiungere la temperatura o togliere i colori finali:
@@ -130,7 +147,7 @@ Comportamento dello script di welcome:
 - si attiva solo su **shell interattiva con terminale** (tty1 in autologin,
   `login`, `ssh`), mai per script, `scp`, cron o comandi non interattivi;
 - una sola volta per sessione;
-- disattivazione al volo: `export LIVEDEB13_NO_WELCOME=1`
+- disattivazione al volo: `export ZINIMALOS_NO_WELCOME=1`
   (per disattivarlo sempre aggiungi quella riga a
   `config/includes.chroot/etc/profile.d/`);
 - se la configurazione desse problemi, ricade su `fastfetch` senza opzioni.
@@ -143,7 +160,7 @@ Per vedere il banner senza riavviare: `fastfetch` oppure
 Nel live sono disponibili:
 
 ```bash
-made by      # creatore (AvancerDev) + progetto (LiveDeb13)
+made by      # creatore (AvancerDev) + progetto (ZinimalOS)
 made         # identico
 made-by      # identico (nome senza spazio, comodo negli script)
 ```
@@ -155,16 +172,16 @@ e anche incollata in uno script — non è un alias di shell.
 I valori stampati vengono da un unico file:
 
 ```sh
-# config/includes.chroot/etc/livedeb13-release  →  /etc/livedeb13-release
-LIVEDEB13_PROJECT="LiveDeb13"
-LIVEDEB13_CREATOR="AvancerDev"
-LIVEDEB13_URL="https://github.com/AvancerDev/LiveDeb13"
-LIVEDEB13_TAGLINE="Debian 13 (trixie) — live + installer"
-LIVEDEB13_VERSION="1.0"
+# config/includes.chroot/etc/zinimalos-release  →  /etc/zinimalos-release
+ZINIMALOS_PROJECT="ZinimalOS"
+ZINIMALOS_CREATOR="AvancerDev"
+ZINIMALOS_URL="https://github.com/AvancerDev/ZinimalOS"
+ZINIMALOS_TAGLINE="Debian 13 (trixie) — live + installer"
+ZINIMALOS_VERSION="1.0"
 ```
 
 Per cambiare nome, URL o versione modifica quel file (e bumpa
-`LIVEDEB13_VERSION` a ogni tag `vX.Y.Z`). Rispetta `NO_COLOR=1` e non usa
+`ZINIMALOS_VERSION` a ogni tag `vX.Y.Z`). Rispetta `NO_COLOR=1` e non usa
 colori quando l’output è rediretto in un file o in una pipe.
 
 ## Pacchetti .deb locali

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LiveDeb13 — verifica che tutti i pacchetti delle liste esistano in Debian 13.
+# ZinimalOS — verifica che tutti i pacchetti delle liste esistano in Debian 13.
 #
 # Evita build lunghe interrotte a metà per un nome sbagliato
 # (es. "E: Unable to locate package gptfdisk": in Debian il pacchetto è gdisk).

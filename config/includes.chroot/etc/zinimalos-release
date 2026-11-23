@@ -1,0 +1,10 @@
+# ZinimalOS — metadati del progetto.
+# Sorgente: config/includes.chroot/etc/zinimalos-release
+# Letto da `made-by` / `made by` e da `zinimalos-info`. Formato: shell.
+# Bumpa ZINIMALOS_VERSION a ogni rilascio (tag vX.Y.Z).
+
+ZINIMALOS_PROJECT="ZinimalOS"
+ZINIMALOS_CREATOR="AvancerDev"
+ZINIMALOS_URL="https://github.com/AvancerDev/ZinimalOS"
+ZINIMALOS_TAGLINE="Debian 13 (trixie) — live + installer"
+ZINIMALOS_VERSION="1.0"

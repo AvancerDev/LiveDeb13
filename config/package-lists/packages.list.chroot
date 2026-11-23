@@ -1,4 +1,4 @@
-# LiveDeb13 — pacchetti del sistema LIVE (chroot)
+# ZinimalOS — pacchetti del sistema LIVE (chroot)
 # Un pacchetto per riga. Le righe che iniziano con # sono commenti.
 # Vedi: https://wiki.debian.org/Live/Build/Customization
 
@@ -96,7 +96,7 @@ wireless-regdb
 
 # --- Info di sistema / branding ---
 # fastfetch: banner con logo e info di sistema all'accesso (vedi
-# config/includes.chroot/etc/profile.d/00-livedeb13-welcome.sh)
+# config/includes.chroot/etc/profile.d/00-zinimalos-welcome.sh)
 fastfetch
 
 # --- Utilità live / rescue ---

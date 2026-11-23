@@ -1,5 +1,5 @@
 127.0.0.1 localhost
-127.0.1.1 livedeb13
+127.0.1.1 zinimalos
 
 # Le seguenti righe sono facoltative per host IPv6
 ::1     ip6-localhost ip6-loopback

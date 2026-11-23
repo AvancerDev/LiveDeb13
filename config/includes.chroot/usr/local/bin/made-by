@@ -1,25 +1,25 @@
 #!/bin/sh
-# made-by — crediti del progetto LiveDeb13.
+# made-by — crediti del progetto ZinimalOS.
 #
 # Uso:
 #   made-by        crediti completi
 #   made by        (scorciatoia: /usr/local/bin/made passa qui)
 #   made
 #
-# I metadati arrivano da /etc/livedeb13-release: per cambiarli basta modificare
-# quel file (o il sorgente config/includes.chroot/etc/livedeb13-release).
+# I metadati arrivano da /etc/zinimalos-release: per cambiarli basta modificare
+# quel file (o il sorgente config/includes.chroot/etc/zinimalos-release).
 
 set -eu
 
-if [ -r /etc/livedeb13-release ]; then
-    . /etc/livedeb13-release
+if [ -r /etc/zinimalos-release ]; then
+    . /etc/zinimalos-release
 fi
 
-PROJECT=${LIVEDEB13_PROJECT:-LiveDeb13}
-CREATOR=${LIVEDEB13_CREATOR:-AvancerDev}
-URL=${LIVEDEB13_URL:-https://github.com/AvancerDev/LiveDeb13}
-TAGLINE=${LIVEDEB13_TAGLINE:-Debian 13 (trixie) — live + installer}
-VERSION=${LIVEDEB13_VERSION:-dev}
+PROJECT=${ZINIMALOS_PROJECT:-ZinimalOS}
+CREATOR=${ZINIMALOS_CREATOR:-AvancerDev}
+URL=${ZINIMALOS_URL:-https://github.com/AvancerDev/ZinimalOS}
+TAGLINE=${ZINIMALOS_TAGLINE:-Debian 13 (trixie) — live + installer}
+VERSION=${ZINIMALOS_VERSION:-dev}
 
 # Colori solo su terminale (rispetta NO_COLOR: https://no-color.org)
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then

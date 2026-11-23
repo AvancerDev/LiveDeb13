@@ -1,5 +1,5 @@
 #!/bin/sh
-# LiveDeb13 — build dell'ISO (richiede root)
+# ZinimalOS — build dell'ISO (richiede root)
 #
 # Comportamento:
 # 1) Se la live-build dell'host manca o è troppo vecchia (serie 2.x/3.x, tipica
@@ -9,7 +9,7 @@
 #    live-build riesegue sempre auto/config.
 # 3) Se live-build non supporta --image-name, il nome dell'ISO è quello
 #    predefinito (live-image-amd64.hybrid.iso): la rinominiamo comunque in
-#    livedeb13-amd64.hybrid.iso, che è il nome atteso da Makefile e docs.
+#    zinimalos-amd64.hybrid.iso, che è il nome atteso da Makefile e docs.
 set -e
 
 lb_version_ok() {
@@ -24,7 +24,7 @@ lb_version_ok() {
 }
 
 # --- Delegazione automatica al container Debian 13 ---------------------------
-if [ "${LIVEDEB13_IN_CONTAINER:-0}" != "1" ] && ! lb_version_ok; then
+if [ "${ZINIMALOS_IN_CONTAINER:-0}" != "1" ] && ! lb_version_ok; then
   if [ -x ./build-docker.sh ] && { command -v docker >/dev/null 2>&1 || command -v podman >/dev/null 2>&1; }; then
     echo "==> live-build dell'host assente o troppo vecchia (serie 2.x/3.x)."
     echo "==> Eseguo la build in un container Debian 13 (build-docker.sh)..."
@@ -68,11 +68,11 @@ fi
 for f in live-image-amd64.hybrid.iso ./*.hybrid.iso; do
   [ -f "$f" ] || continue
   case "$f" in
-    ./livedeb13-amd64.hybrid.iso|livedeb13-amd64.hybrid.iso) ;;
-    *) mv -f "$f" livedeb13-amd64.hybrid.iso ;;
+    ./zinimalos-amd64.hybrid.iso|zinimalos-amd64.hybrid.iso) ;;
+    *) mv -f "$f" zinimalos-amd64.hybrid.iso ;;
   esac
 done
 
-if [ -f livedeb13-amd64.hybrid.iso ]; then
-  echo "==> ISO: livedeb13-amd64.hybrid.iso"
+if [ -f zinimalos-amd64.hybrid.iso ]; then
+  echo "==> ISO: zinimalos-amd64.hybrid.iso"
 fi
