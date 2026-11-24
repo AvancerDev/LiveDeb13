@@ -828,6 +828,40 @@ Riga attesa nel log:
 Verifica installer: OK (install/vmlinuz + initrd.gz presenti, menu coerente)
 ```
 
+### 6.16 `gzip: binary/tools/loadlin.exe already exists; not overwritten`
+
+```
+[..] lb binary_loadlin
+P: Begin copying loadlin...
+gzip: binary/tools/loadlin.exe already exists; not overwritten
+E: An unexpected failure occurred, exiting...
+```
+
+Non è un errore di configurazione: lo script `binary_loadlin` di live-build
+decomprime `loadlin.exe` **senza** cancellare l'output precedente. Se la
+cartella `binary/` è rimasta da una build precedente (o da una build morta a
+metà), il file esiste già e `gzip` si rifiuta di sovrascriverlo → la build si
+ferma con un errore che sembra incomprensibile.
+
+È lo stesso genere di problema di
+`ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists`:
+file generati riusati da una build all'altra.
+
+Da ora `auto/build`:
+
+1. quando riesegue gli stadi `chroot`/`binary` per una modifica di
+   configurazione, **cancella `binary/`** (è tutta generata: squashfs,
+   isolinux, grub, loadlin…, e viene riscritta comunque);
+2. se trova `binary/` senza l'impronta finale `.build/binary_iso` (= build
+   precedente interrotta a metà stadio binary) la cancella comunque.
+
+Se ti capita con una versione vecchia dello script, basta:
+
+```bash
+rm -rf binary
+./build-docker.sh
+```
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

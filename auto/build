@@ -78,6 +78,15 @@ if [ -d .build ]; then
       echo "==> Configurazione più recente dell'ultima build: rieseguo chroot + binary"
       echo "    (nessun pacchetto riscaricato: chroot/ e cache/ restano)"
       rm -f .build/chroot_* .build/binary_* .build/binary
+      # binary/ è interamente generata (squashfs, isolinux, grub, loadlin…):
+      # riusarla con gli stadi rieseguiti produce errori tipo
+      #   gzip: binary/tools/loadlin.exe already exists; not overwritten
+      #   ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists
+      # ed è comunque riscritta tutta dallo stadio binary.
+      if [ -d binary ]; then
+        echo "    rimuovo binary/ (verrà rigenerata)"
+        rm -rf binary
+      fi
     fi
   fi
 fi
@@ -112,6 +121,16 @@ fi
 if [ -e .build/installer ] && [ ! -s binary/install/vmlinuz ]; then
   echo "==> Installer assente da binary/: rieseguo lo stadio installer"
   rm -f .build/installer .build/installer_debian-installer .build/installer_preseed
+fi
+
+# --- binary/ rimasta a metà (build precedente interrotta) --------------------
+# Se la cartella binary/ esiste ma non ha le impronte finali dello stadio
+# (binary_iso), la build precedente è morta a metà: i file generati sono
+# incoerenti e fanno fallire gli stadi successivi con "already exists".
+if [ -d binary ] && [ ! -e .build/binary_iso ]; then
+  echo "==> binary/ incompleta (build precedente interrotta): la rigenero"
+  rm -rf binary
+  rm -f .build/binary_* .build/binary
 fi
 
 # --- Residuo che fa fallire lo stadio binary --------------------------------
