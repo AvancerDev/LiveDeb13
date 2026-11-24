@@ -52,6 +52,26 @@ if [ -z "$KEYID" ]; then
   die "nessuna chiave configurata: esegui prima ./packaging/setup-gpg.sh"
 fi
 
+# --- Preflight: autenticazione git -------------------------------------------
+# Il push su GitHub richiede credenziali. Se `gh` è autenticato, gli facciamo
+# configurare l'helper di git: è la causa più comune di
+#   remote: Invalid username or token. Password authentication is not supported
+#   fatal: Autenticazione non riuscita per 'https://github.com/...'
+IS_SSH=0
+case "$GH_REMOTE" in
+  git@*|ssh://*) IS_SSH=1 ;;
+esac
+
+if [ "$PUBLISH" = "1" ] && [ "$IS_SSH" = "0" ] && command -v gh >/dev/null 2>&1; then
+  if gh auth status >/dev/null 2>&1; then
+    gh auth setup-git >/dev/null 2>&1 || true
+    _who="$(gh api user --jq .login 2>/dev/null || echo 'utente gh')"
+    say "==> Autenticazione git: uso il token di gh ($_who)"
+  else
+    say "==> ATTENZIONE: gh non è autenticato (gh auth login) e git non ha credenziali."
+  fi
+fi
+
 # --- 1/4 pacchetto -----------------------------------------------------------
 say "==> 1/4 Costruisco il pacchetto"
 DEB=$(./packaging/build-deb.sh | tail -1)
@@ -160,7 +180,35 @@ else
   DEBVER="$(dpkg-deb -f "$DEB" Version 2>/dev/null || basename "$DEB" .deb)"
   git -C "$TMP" -c user.name="ZinimalOS" -c user.email="noreply@zinimalos.local" \
       commit -q -m "repo: zinimalos-branding $DEBVER"
-  git -C "$TMP" push -q origin "HEAD:$BRANCH"
+
+  if ! PUSH_LOG="$(git -C "$TMP" push origin "HEAD:$BRANCH" 2>&1)"; then
+    printf '%s\n' "$PUSH_LOG" >&2
+    say ""
+    say "ERRORE: GitHub ha rifiutato la pubblicazione ($GH_REMOTE)."
+    case "$PUSH_LOG" in
+      *"Invalid username or token"*|*"Authentication failed"*|*"could not read Username"*|*"Permission to"*|*"403"*|*"non riuscita"*)
+        say "È un problema di CREDENZIALI git, non del repository. Rimedi:"
+        say ""
+        say "  1) il più semplice (usa il token di gh per git HTTPS):"
+        say "       gh auth login          # solo se non sei già autenticato"
+        say "       gh auth setup-git"
+        say ""
+        say "  2) credenziali vecchie/sbagliate salvate sul sistema:"
+        say "       git credential-cache exit"
+        say "       rm -f ~/.git-credentials"
+        say ""
+        say "  3) via SSH (se hai una chiave registrata su GitHub):"
+        say "       GH_REMOTE=git@github.com:$GH_REPO.git $0"
+        ;;
+      *)
+        say "Dettagli nell'output sopra."
+        ;;
+    esac
+    say ""
+    say "Il repository locale è già costruito e firmato in ${REPO_DIR#$ROOT/}/:"
+    say "dopo aver sistemato l'accesso basta rilanciare questo script."
+    exit 1
+  fi
   say "    pubblicato: zinimalos-branding $DEBVER"
 fi
 
