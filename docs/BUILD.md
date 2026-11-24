@@ -469,6 +469,41 @@ du -sh cache/*         # bootstrap/, packages.bootstrap/, packages.chroot/…
 Se `cache/` è vuota (mai completata una build), i pacchetti — firmware incluso —
 vanno riscaricati una volta; dalle build successive restano in cache.
 
+### 6.10 `ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists`
+
+```
+[11:59:34] lb binary_debian-installer
+Fetched 201 MB in 1min 19s (2561 kB/s)
+Download complete and in download only mode
+ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists
+E: An unexpected failure occurred, exiting...
+```
+
+Lo stadio `binary` (squashfs + ISO + debian-installer) è rimasto **a metà** in una
+build precedente: `binary/dists/testing/trixie` esiste già, quindi `ln -s` non
+può ricrearlo. Rimediare è veloce e **non tocca il chroot né i `.deb` in cache**:
+
+```bash
+rm -rf binary
+rm -f .build/*binary*      # senza i suoi stage file, lo stadio viene rifatto
+./build-docker.sh
+```
+
+Costo tipico: ~4–6 minuti (viene riscaricato solo l’insieme del Debian
+Installer, ~200 MB, perché live-build lo rifetcha a ogni passaggio; squashfs e
+ISO vengono ricostruiti dal `chroot/` esistente).
+
+Se vuoi provare la via più rapida (a tuo rischio, riusa tutto il resto):
+
+```bash
+rm -f binary/dists/testing/trixie
+./build-docker.sh
+```
+
+Da questa versione `./build-docker.sh` rimuove da sé `binary/` e i suoi stage
+file **quando una build fallisce**, così la successiva riparte pulita su quello
+stadio senza errori da residui.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

@@ -230,6 +230,11 @@ sovrascrivi `APT_OPTIONS`: aggiorna con `git pull`. Se fallisce ancora,
 `grep -n 'Y/n\|Abort\|unexpected failure' build.log` e allegalo per l’analisi.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.6.
 
+**`ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists`?**
+Residuo dello stadio `binary` di una build interrotta. Rimedio senza
+riscaricare il chroot: `rm -rf binary && rm -f .build/*binary* && ./build-docker.sh`.
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.10.
+
 **`Cannot stat source directory "chroot"`?**
 Build uccisa a metà: `.build/` dichiara completati stadi che non esistono più.
 Rimedio che **non riscarica nulla**: `rm -rf .build && ./build-docker.sh`

@@ -214,6 +214,15 @@ if [ "$RC" -ne 0 ]; then
   # nessun lock deve sopravvivere a una build fallita
   ${SUDO} rm -f .lock 2>/dev/null || rm -f .lock 2>/dev/null || true
 
+  # Lo stadio "binary" (squashfs + ISO + debian-installer) è quello che più
+  # spesso resta a metà: un binary/ parziale fa fallire la build successiva con
+  #   ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists
+  # Rimuoverlo costa pochi minuti e ZERO download del chroot: chroot/ e cache/
+  # restano intatti e i suoi stage file vengono azzerati, così viene rifatto.
+  echo "    Rimuovo binary/ e i suoi file di stage (la prossima build lo rifà)" >&2
+  ${SUDO} rm -rf binary 2>/dev/null || rm -rf binary 2>/dev/null || true
+  find .build -maxdepth 1 -name '*binary*' -delete 2>/dev/null || true
+
   echo
   echo "ERRORE: build fallita (exit $RC). Log completo salvato in: build.log" >&2
   echo "--- ultime 30 righe di build.log ---" >&2
