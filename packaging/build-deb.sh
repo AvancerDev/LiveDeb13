@@ -54,10 +54,12 @@ rm -rf "$STAGE/opt"
 
 # Script eseguibili e permessi coerenti
 chmod 0755 "$STAGE"/usr/local/bin/* 2>/dev/null || true
+chmod 0755 "$STAGE"/usr/libexec/zinimalos/* 2>/dev/null || true
 find "$STAGE" -name '*.gpg' -exec chmod 0644 {} + 2>/dev/null || true
 find "$STAGE" -type d -exec chmod 0755 {} +
-find "$STAGE" -type f ! -path "$STAGE/usr/local/bin/*" -exec chmod 0644 {} + 2>/dev/null || true
-chmod 0755 "$STAGE"/usr/local/bin/* 2>/dev/null || true
+find "$STAGE" -type f ! -path "$STAGE/usr/local/bin/*" ! -path "$STAGE/usr/libexec/*" \
+    -exec chmod 0644 {} + 2>/dev/null || true
+chmod 0755 "$STAGE"/usr/local/bin/* "$STAGE"/usr/libexec/zinimalos/* 2>/dev/null || true
 
 # Guardia anti-regressione: questi file appartengono a pacchetti Debian
 # (base-files) e non possono stare nel nostro pacchetto, altrimenti dpkg
@@ -69,12 +71,24 @@ for _f in etc/issue etc/issue.net etc/motd etc/hostname etc/hosts; do
   fi
 done
 
+# Guardia anti-regressione: nessuna fonte apt ATTIVA nel pacchetto. Se il
+# repository ZinimalOS non è raggiungibile, l'`apt update` che live-build esegue
+# alla fine dello stadio chroot fallirebbe e la build si fermerebbe. La riga vive
+# come template e viene attivata sulla macchina installata (repo-enable).
+if [ -n "$(find "$STAGE/etc/apt/sources.list.d" -name '*.sources' -o -name '*.list' 2>/dev/null | head -1)" ]; then
+  die "in etc/apt/sources.list.d/ c'è una fonte apt attiva: durante la build" \
+      "live-build esegue 'apt update' e un repo non raggiungibile fa fallire tutto." \
+      "Metti la riga in $PAYLOAD/usr/share/zinimalos/zinimalos.sources (template)."
+fi
+
 # Se la chiave pubblica non c'è ancora (setup-gpg.sh non eseguito), il
 # pacchetto non deve installare un repository che apt non saprebbe verificare.
 if [ ! -s "$STAGE/etc/apt/keyrings/zinimalos.gpg" ]; then
   say "NOTA: chiave pubblica assente → il pacchetto NON include il repository apt."
   say "      Esegui ./packaging/setup-gpg.sh per attivare gli aggiornamenti via apt."
-  rm -f "$STAGE/etc/apt/sources.list.d/zinimalos.sources"
+  rm -f "$STAGE/usr/share/zinimalos/zinimalos.sources"
+  rm -f "$STAGE/lib/systemd/system/zinimalos-repo.service"
+  rm -f "$STAGE/usr/libexec/zinimalos/repo-enable"
 fi
 
 # --- DEBIAN/ -----------------------------------------------------------------

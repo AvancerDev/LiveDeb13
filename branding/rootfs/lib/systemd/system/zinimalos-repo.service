@@ -1,0 +1,19 @@
+[Unit]
+Description=ZinimalOS - attiva il repository degli aggiornamenti
+Documentation=file:/usr/share/zinimalos/zinimalos.sources
+# Sulla live (/run/live esiste) non serve: la live non si aggiorna.
+ConditionPathExists=!/run/live
+ConditionPathExists=!/etc/apt/sources.list.d/zinimalos.sources
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/zinimalos/repo-enable
+RemainAfterExit=yes
+# Il repository può non essere ancora pubblicato: l'unità non deve mai
+# marcare il boot come degradato.
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target

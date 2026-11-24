@@ -39,6 +39,13 @@ apply_branding_file() {
 case "$1" in
   configure)
     mkdir -p "$STATE_DIR"
+
+    # Attiva l'unità che, sulla macchina installata, abilita il repository degli
+    # aggiornamenti quando è raggiungibile (vedi usr/libexec/zinimalos/repo-enable).
+    # Nel chroot di build systemd non gira: `systemctl enable` crea solo i link,
+    # quindi è sicuro e non serve che fallisca la build se non è possibile.
+    systemctl enable zinimalos-repo.service >/dev/null 2>&1 || true
+
     apply_branding_file /usr/share/zinimalos/issue /etc/issue
     apply_branding_file /usr/share/zinimalos/motd  /etc/motd
     ;;

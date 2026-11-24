@@ -15,6 +15,14 @@ set -eu
 rm -f /etc/profile.d/00-zinimalos-welcome.sh
 rm -f /etc/profile.d/00-livedeb13-welcome.sh
 
+# Riga apt del repository ZinimalOS eventualmente rimasta attiva da una build
+# precedente (o da una versione vecchia del pacchetto). Deve stare QUI come
+# template, non attiva: alla fine dello stadio chroot live-build esegue
+# `apt update` e un repository non raggiungibile farebbe fallire la build con
+#   E: The repository '... zinimalos-repo trixie Release' does not have a Release file
+# L'attivazione avviene sulla macchina installata (zinimalos-repo.service).
+rm -f /etc/apt/sources.list.d/zinimalos.sources
+
 # File della vecchia identità "livedeb13" rimasti da build precedenti
 rm -f /etc/livedeb13-release
 rm -f /usr/local/bin/livedeb13-info

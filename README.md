@@ -170,6 +170,11 @@ make publish    # reprepro: inserisce, firma e pubblica su gh-pages
 sudo apt update && sudo apt upgrade
 ```
 
+La riga apt del repository **non è attiva nell'immagine** (la build fallirebbe
+con `does not have a Release file` finché il repo non è pubblicato): si attiva da
+sola sulla macchina installata, al primo avvio in cui il repository risponde
+(`zinimalos-repo.service` → `/usr/libexec/zinimalos/repo-enable`).
+
 L'ISO installa lo **stesso** pacchetto (viene messo in
 `config/includes.chroot/opt/zinimalos/packages/` e l'hook `0400` lo installa nel
 chroot), quindi ciò che aggiorni con `apt` è identico a ciò che finisce

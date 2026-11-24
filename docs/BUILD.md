@@ -604,6 +604,40 @@ rm -f .build/chroot_* .build/binary*
 ./build-docker.sh
 ```
 
+### 6.12 `The repository 'https://avancerdev.github.io/zinimalos-repo trixie Release' does not have a Release file`
+
+```
+[14:15:17] lb chroot_prep remove all mode-archives-chroot
+P: Deconfiguring file /etc/apt/sources.list
+Err:12 https://avancerdev.github.io/zinimalos-repo trixie Release
+  404  Not Found
+E: The repository '...' does not have a Release file.
+```
+
+Alla fine dello stadio chroot live-build esegue un `apt update`: se dentro il
+chroot c'è una riga apt che punta al repository ZinimalOS **e quel repository
+non è ancora pubblicato**, `apt` fallisce e la build si ferma.
+
+Da questa versione la riga **non è attiva nell'immagine**: vive come template in
+`/usr/share/zinimalos/zinimalos.sources` e viene attivata sulla macchina
+installata (`zinimalos-repo.service` → `/usr/libexec/zinimalos/repo-enable`),
+solo quando il repository risponde. Tre difese:
+
+1. `packaging/build-deb.sh` **rifiuta** un payload con `*.sources`/`*.list` in
+   `etc/apt/sources.list.d/`;
+2. l'hook `0300` cancella dal chroot una riga rimasta attiva da build o
+   pacchetti precedenti;
+3. `repo-enable` non attiva nulla se `curl` non raggiunge
+   `dists/trixie/Release`, e riprova al boot successivo.
+
+Se hai il problema con un chroot sporco, il rimedio immediato è:
+
+```bash
+rm -f chroot/etc/apt/sources.list.d/zinimalos.sources
+rm -f .build/chroot_* .build/binary*
+./build-docker.sh
+```
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

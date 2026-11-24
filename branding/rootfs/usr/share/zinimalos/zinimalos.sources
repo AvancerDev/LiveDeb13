@@ -1,0 +1,22 @@
+# ZinimalOS — repository degli aggiornamenti (template, NON attivo).
+#
+# Questo file è un TEMPLATE: non sta in /etc/apt/sources.list.d/ perché durante
+# la build di live-build lo stadio finale `chroot_archives remove` esegue un
+# `apt update` dentro il chroot. Se il repository non fosse ancora pubblicato
+# (o fosse irraggiungibile) la build fallirebbe con:
+#   E: The repository '... zinimalos-repo trixie Release' does not have a Release file
+#
+# L'attivazione avviene sulla macchina INSTALLATA, al primo avvio, tramite
+# /usr/libexec/zinimalos/repo-enable (unità systemd zinimalos-repo.service):
+# il file viene copiato in /etc/apt/sources.list.d/zinimalos.sources solo se il
+# repository risponde, altrimenti si riprova al successivo avvio.
+#
+# Attivazione manuale (macchine installate con una ISO vecchia):
+#   sudo cp /usr/share/zinimalos/zinimalos.sources /etc/apt/sources.list.d/
+
+Types: deb
+URIs: https://avancerdev.github.io/zinimalos-repo/
+Suites: trixie
+Components: main
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/zinimalos.gpg

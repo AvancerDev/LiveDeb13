@@ -79,7 +79,33 @@ Se la perdi: le macchine non si fidano più del repo e va reinstallata la chiave
 a mano su ognuna. La passphrase resta in cache nell'agente GPG durante la
 sessione (`gpgconf --kill gpg-agent` per azzerarla).
 
-### 2.2 Repository: crea il progetto su GitHub
+### 2.2 Come si attiva la riga apt (e perché non è attiva nell'immagine)
+
+La riga apt **non** sta in `/etc/apt/sources.list.d/` dentro l'immagine. Motivo:
+alla fine dello stadio chroot live-build esegue `apt update` nel chroot; se il
+repository non è ancora pubblicato (o è irraggiungibile) la build muore con
+
+```
+E: The repository 'https://avancerdev.github.io/zinimalos-repo trixie Release' does not have a Release file
+```
+
+Quindi il pacchetto installa:
+
+| File | Ruolo |
+|---|---|
+| `/usr/share/zinimalos/zinimalos.sources` | template della riga apt (inattivo) |
+| `/usr/libexec/zinimalos/repo-enable` | verifica che il repo risponda e copia il template in `/etc/apt/sources.list.d/` |
+| `/lib/systemd/system/zinimalos-repo.service` | esegue `repo-enable` a ogni avvio finché non riesce |
+
+Sulla macchina **installata** il repository si attiva da solo al primo avvio in
+cui `https://…/dists/trixie/Release` risponde (stato in
+`/var/lib/zinimalos/repo-enabled`). Sulla live l'unità non parte
+(`ConditionPathExists=!/run/live`).
+
+Puoi anche pubblicare prima e installare dopo: in entrambi i casi funziona. Se
+installi una ISO prima di pubblicare il repo, la macchina riprova a ogni avvio.
+
+### 2.3 Repository: crea il progetto su GitHub
 
 Serve un repository **dedicato** per il repo apt, separato da quello dell'ISO:
 
@@ -89,7 +115,7 @@ Serve un repository **dedicato** per il repo apt, separato da quello dell'ISO:
   from a branch* → `gh-pages` / `/ (root)`.
 - L'URL finale è `https://avancerdev.github.io/zinimalos-repo/`; se cambi
   utente o nome, aggiorna `URIs:` in
-  `branding/rootfs/etc/apt/sources.list.d/zinimalos.sources` (e `GH_REPO`).
+  `branding/rootfs/usr/share/zinimalos/zinimalos.sources` (e `GH_REPO`).
 
 Perché Pages: HTTPS gratis, nessun server da mantenere, apt funziona
 normalmente (indici `Release`/`InRelease` firmati). Lo spazio occupato sono
@@ -177,8 +203,15 @@ sudo apt install --reinstall zinimalos-branding
 
 ## 5. Macchine installate con una ISO vecchia (bootstrap una volta)
 
-Se la macchina non ha ancora la riga apt di ZinimalOS (`ls
-/etc/apt/sources.list.d/` non mostra `zinimalos.sources`), tre comandi:
+Se la macchina ha già il pacchetto `zinimalos-branding` basta forzare
+l'attivazione:
+
+```bash
+sudo systemctl start zinimalos-repo.service     # oppure: sudo /usr/libexec/zinimalos/repo-enable
+sudo apt update && sudo apt install zinimalos-branding
+```
+
+Se invece non ha né chiave né pacchetto (ISO precedenti a questa versione):
 
 ```bash
 sudo install -d -m 755 /etc/apt/keyrings
@@ -195,7 +228,8 @@ EOF
 sudo apt update && sudo apt install zinimalos-branding
 ```
 
-Dalla successiva ISO in poi non serve: chiave e riga apt arrivano col pacchetto.
+Dalla successiva ISO in poi non serve: chiave e riga apt arrivano col pacchetto
+e si attivano da sole.
 
 ---
 
@@ -205,6 +239,8 @@ Dalla successiva ISO in poi non serve: chiave e riga apt arrivano col pacchetto.
 |---|---|
 | `apt update` → `NO_PUBKEY` | keyring assente o diverso: reinstalla `zinimalos-branding` o rifai il §5 |
 | `apt update` → `404` su `zinimalos-repo` | repository non ancora pubblicato / branch `gh-pages` vuoto: `make publish` |
+| build → `does not have a Release file` | nel chroot è rimasta una fonte apt **attiva**: `rm -f chroot/etc/apt/sources.list.d/zinimalos.sources` (l'hook `0300` ora lo fa da sé) |
+| repo pubblicato ma la macchina non lo vede | `sudo /usr/libexec/zinimalos/repo-enable` e riprova; verifica `systemctl status zinimalos-repo` |
 | `apt update` → `Release ... is not signed` | `make publish` non ha firmato: controlla `packaging/gpg-keyid` e che `gpg --list-keys` la veda |
 | `apt upgrade` dice "0 aggiornati" | versione già allineata: `apt policy zinimalos-branding` per vedere la candidata |
 | `apt upgrade` chiede cosa fare di `/etc/issue` | manca `90-zinimalos` (pacchetto vecchio): `sudo apt install --reinstall zinimalos-branding` |

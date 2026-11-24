@@ -1,0 +1,48 @@
+#!/bin/sh
+# ZinimalOS — attiva il repository degli aggiornamenti sulla macchina installata.
+#
+# Perché non è già attivo nell'immagine: durante la build live-build esegue
+# `apt update` dentro il chroot; una riga apt che punta a un repository non
+# ancora pubblicato fa fallire la build. Quindi la riga vive come template in
+# /usr/share/zinimalos/zinimalos.sources e viene copiata qui solo quando il
+# repository risponde davvero.
+#
+# Eseguito da zinimalos-repo.service (ogni avvio, finché non riesce).
+# Codici di uscita: sempre 0 — un repository irraggiungibile non deve mai
+# lasciare errori nel boot; al prossimo avvio si riprova.
+
+set -eu
+
+ACTIVE=/etc/apt/sources.list.d/zinimalos.sources
+TEMPLATE=/usr/share/zinimalos/zinimalos.sources
+STAMP=/var/lib/zinimalos/repo-enabled
+URL=https://avancerdev.github.io/zinimalos-repo/dists/trixie/Release
+
+log() { echo "zinimalos-repo: $*"; }
+
+if [ -e "$ACTIVE" ]; then
+  exit 0                     # già attivo
+fi
+if [ -e "$STAMP" ]; then
+  exit 0                     # già attivato in passato (file rimosso a mano: rispetto la scelta)
+fi
+if [ ! -f "$TEMPLATE" ]; then
+  exit 0                     # template assente: niente da fare
+fi
+
+# Serve curl per la verifica; senza, non tocchiamo nulla.
+if ! command -v curl >/dev/null 2>&1; then
+  log "curl non disponibile, attivazione rimandata"
+  exit 0
+fi
+
+if ! curl -fsS --max-time 20 -o /dev/null "$URL"; then
+  log "repository non raggiungibile, riprovo al prossimo avvio"
+  exit 0
+fi
+
+install -d -m 0755 /var/lib/zinimalos
+install -m 0644 "$TEMPLATE" "$ACTIVE"
+: > "$STAMP"
+log "repository attivato in $ACTIVE"
+exit 0
