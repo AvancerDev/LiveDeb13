@@ -1,21 +1,100 @@
 #!/bin/sh
-# ZinimalOS — verifica che il sistema costruito sia utilizzabile.
+# ZinimalOS — verifica E ripara il sistema prima di creare lo squashfs.
 #
-# Serve a intercettare PRIMA di produrre l'ISO un difetto che altrimenti si
-# scopre solo avviando la live, dove costa un'altra build:
+# Serve a intercettare un difetto che altrimenti si scopre solo avviando la
+# live, dove costa un'altra build:
 #
 #   sudo: /usr/bin/sudo is owned by uid 1000, should be 0
 #   apt:  open (13: Permission denied)
+#   user: /home/user: change directory failed: Permission denied
 #
-# Causa storica: un `chown -R utente` sul chroot. Se il proprietario o il bit
-# setuid dei binari critici sono sbagliati, la build si ferma qui.
+# Origine storica: un `chown -R utente` fatto sul chroot (o sul suo cache).
+# live-build SALVA il chroot in cache/chroot e lo RIpristina all'inizio dello
+# stadio chroot: per questo riparare il solo chroot/ non bastava — il cache
+# avvelenato lo riportava indietro. Questo hook gira DOPO il ripristino del
+# cache e PRIMA del salvataggio, quindi ripara il sistema e riscrive un cache
+# pulito.
 
 set -eu
 
 fail=0
 error() { echo "ERRORE: $*" >&2; fail=1; }
 
-# --- Proprietario e permessi dei binari critici ------------------------------
+# Permessi canonici dei binari privilegiati di Debian (mode:path).
+# `chown` li azzera: qui li rimettiamo come li consegna dpkg.
+PRIV_BINS="4755:/usr/bin/sudo
+4755:/usr/bin/su
+4755:/usr/bin/passwd
+4755:/usr/bin/chsh
+4755:/usr/bin/chfn
+4755:/usr/bin/newgrp
+4755:/usr/bin/gpasswd
+4755:/usr/bin/mount
+4755:/usr/bin/umount
+4755:/usr/bin/fusermount3
+4755:/usr/lib/openssh/ssh-keysign
+4755:/usr/libexec/polkit-agent-helper-1
+4754:/usr/lib/dbus-1.0/dbus-daemon-launch-helper
+2755:/usr/lib/x86_64-linux-gnu/utempter/utempter"
+
+restore_privileged_bits() {
+  printf '%s\n' "$PRIV_BINS" | while IFS=: read -r mode path; do
+    [ -e "$path" ] || continue
+    chmod "$mode" "$path" 2>/dev/null || true
+  done
+  # gruppi particolari richiesti da due helper
+  [ -e /usr/lib/dbus-1.0/dbus-daemon-launch-helper ] && \
+    chgrp messagebus /usr/lib/dbus-1.0/dbus-daemon-launch-helper 2>/dev/null || true
+  [ -e /usr/lib/x86_64-linux-gnu/utempter/utempter ] && \
+    chgrp utmp /usr/lib/x86_64-linux-gnu/utempter/utempter 2>/dev/null || true
+}
+
+# --- 1. Riparazione della proprietà dei file di sistema ----------------------
+# Le directory di sistema devono essere di root. NON tocchiamo /home, /tmp,
+# /var/spool, /var/mail, /run, /dev: lì un proprietario non-root è legittimo.
+SYSTEM_DIRS="/usr /bin /sbin /lib /lib64 /lib32 /libx32 /etc /boot /opt \
+/var/lib/dpkg /var/lib/apt /var/cache/apt /var/lib/systemd /var/lib/polkit-1"
+
+bad="$(find /usr /etc /var/lib/dpkg -xdev ! -uid 0 -print -quit 2>/dev/null || true)"
+if [ -n "$bad" ]; then
+  echo "==> Proprietà errata nel sistema ($bad): ripristino root:root"
+  for d in $SYSTEM_DIRS; do
+    [ -e "$d" ] && chown -R 0:0 "$d" 2>/dev/null || true
+  done
+  # ATTENZIONE: chown azzera i bit setuid/setgid dei file regolari. Vanno
+  # ripristinati, altrimenti sudo/su/passwd/mount non funzionano più.
+  restore_privileged_bits
+  # apt scarica come utente _apt: queste due directory sono SUA proprietà
+  # (è esattamente ciò che rende possibile "open (13: Permission denied)")
+  for d in /var/cache/apt/archives/partial /var/lib/apt/lists/partial; do
+    [ -d "$d" ] || continue
+    if id _apt >/dev/null 2>&1; then
+      chown -R _apt:root "$d" 2>/dev/null || true
+    fi
+    chmod 0700 "$d" 2>/dev/null || true
+  done
+  echo "    riparazione completata"
+fi
+
+# --- 2. Home dell'utente live ------------------------------------------------
+# Se /home/user esiste già (o è stato creato da useradd -m) deve appartenere
+# all'utente: altrimenti al login si legge
+#   user: /home/user: change directory failed: Permission denied
+if id user >/dev/null 2>&1; then
+  _ug="$(id -gn user)"
+  install -d -m 0755 -o user -g "$_ug" /home/user
+  if [ -d /home/user ]; then
+    chown -R user:"$_ug" /home/user 2>/dev/null || true
+    chmod -R u+rwX,go+rX /home/user 2>/dev/null || true
+    # file di skel mancanti (copia solo se assenti, senza sovrascrivere)
+    for f in /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout; do
+      [ -f "$f" ] || continue
+      [ -e "/home/user/$(basename "$f")" ] || cp -a "$f" /home/user/ 2>/dev/null || true
+    done
+  fi
+fi
+
+# --- 3. Verifiche bloccanti --------------------------------------------------
 for f in /usr/bin/sudo /usr/bin/systemctl /usr/bin/apt /usr/bin/dpkg \
          /usr/bin/passwd /bin/sh /usr/bin/dash; do
   if [ ! -e "$f" ]; then
@@ -32,24 +111,29 @@ if [ -e /usr/bin/sudo ] && [ ! -u /usr/bin/sudo ]; then
   error "/usr/bin/sudo non ha il bit setuid: 'sudo' rifiuterà di partire"
 fi
 
-# --- Comandi di base attesi nella live --------------------------------------
 rebo=""
 for f in /sbin/reboot /usr/sbin/reboot /bin/systemctl /usr/bin/systemctl; do
   [ -e "$f" ] && rebo="$f" && break
 done
 [ -n "$rebo" ] || error "nessun comando di riavvio (/sbin/reboot o systemctl)"
 
-# --- Directory che apt deve poter scrivere ----------------------------------
 for d in /var/lib/apt/lists /var/cache/apt/archives /var/lib/dpkg; do
   [ -d "$d" ] || continue
   uid="$(stat -c %u "$d")"
   [ "$uid" = "0" ] || error "$d appartiene a uid $uid (apt fallirebbe con 'open (13: Permission denied)')"
 done
 
+if id user >/dev/null 2>&1 && [ -d /home/user ]; then
+  _uid="$(id -u user)"
+  _home_uid="$(stat -c %u /home/user)"
+  [ "$_home_uid" = "$_uid" ] || \
+    error "/home/user appartiene a uid $_home_uid invece che a user ($_uid)"
+fi
+
 if [ "$fail" = "1" ]; then
   echo "VERIFICA FALLITA: il sistema costruito non è utilizzabile." >&2
-  echo "                 Rimedi: sudo chown -R 0:0 chroot cache, poi ricostruisci." >&2
+  echo "                 Rimedi: rm -rf cache/chroot e ricostruisci (il cache del chroot va rigenerato)." >&2
   exit 1
 fi
 
-echo "Verifica sistema: OK (sudo setuid + owner root, apt scrivibile, riavvio presente)"
+echo "Verifica sistema: OK (sudo setuid+root, apt scrivibile, /home/user, riavvio)"

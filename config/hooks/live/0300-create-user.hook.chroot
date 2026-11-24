@@ -7,6 +7,17 @@ if ! id user >/dev/null 2>&1; then
   useradd -m -s /bin/bash -G sudo,adm user
 fi
 
+# La home deve appartenere all'utente e essere attraversabile, altrimenti al
+# login la console dice:
+#   user: /home/user: change directory failed: Permission denied
+#   Logging in with home = "/"
+# (succede quando un chown -R di root tocca anche /home, o quando /home/user
+#  arriva da una build precedente con proprietario sbagliato)
+_ug="$(id -gn user)"
+install -d -m 0755 -o user -g "$_ug" /home/user
+chown -R user:"$_ug" /home/user 2>/dev/null || true
+chmod -R u+rwX,go+rX /home/user 2>/dev/null || true
+
 echo "user:live" | chpasswd
 echo "root:live" | chpasswd
 

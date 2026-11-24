@@ -89,14 +89,17 @@ fi
 #   sudo: /usr/bin/sudo is owned by uid 1000, should be 0   (sudo non parte)
 #   apt:  open (13: Permission denied)                      (cache non scrivibile)
 # Qui li riportiamo a root:root prima di costruire.
+# NOTA: /home, /tmp, /var/spool, /var/mail, /run e /dev possono appartenere
+# legittimamente a utenti non-root (la home dell'utente live!) e non vanno
+# toccati: la riparazione completa la fa l'hook 0450 dentro il chroot, che gira
+# dopo il ripristino del cache e prima del suo salvataggio.
 if [ -d chroot ] && [ "$(id -u)" = "0" ]; then
-  for _d in chroot cache; do
-    [ -d "$_d" ] || continue
-    if [ -n "$(find "$_d" -xdev ! -uid 0 -print -quit 2>/dev/null)" ]; then
-      echo "==> File non di root in ${_d}/: ripristino root:root (la ISO sarebbe rotta)"
-      chown -R 0:0 "$_d" || true
-    fi
-  done
+  _prune='\( -path chroot/home -o -path chroot/tmp -o -path chroot/var/spool -o -path chroot/var/mail -o -path chroot/run -o -path chroot/dev \) -prune -o'
+  _bad="$(eval "find chroot -mindepth 1 -xdev $_prune ! -uid 0 -print -quit" 2>/dev/null || true)"
+  if [ -n "$_bad" ]; then
+    echo "==> File non di root in chroot/ ($_bad): ripristino root:root"
+    eval "find chroot -mindepth 1 -xdev $_prune ! -uid 0 -exec chown -h 0:0 {} +" 2>/dev/null || true
+  fi
 fi
 
 if ! lb build noauto "$@"; then

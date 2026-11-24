@@ -671,14 +671,66 @@ Da ora:
 ==> File non di root in chroot/: ripristino root:root (la ISO sarebbe rotta)
 ```
 
-Se hai ancora un'ISO con questo difetto, va **ricostruita** (non si ripara da
-dentro). Per essere sicuro che il chroot sia pulito:
+Perché il solo `chown` non bastava: live-build **salva il chroot in
+`cache/chroot/`** alla fine dello stadio chroot e lo **ripristina** all'inizio
+dello stadio successivo (lo vedi nei log come `Restoring .../cache/chroot`). Un
+cache salvato quando il chroot era già sporco rimetteva indietro i file di uid
+1000 *dopo* ogni riparazione fatta prima di `lb build`. Inoltre `chown` azzera i
+bit **setuid/setgid**: un `chown -R 0:0` senza ripristinare i modi lascia
+`sudo` di root ma senza setuid (`sudo: setuid must be root-owned and setuid bit
+set`).
+
+Da ora la riparazione avviene **dentro** il chroot, con l'hook
+`config/hooks/normal/0450-verify-system.hook.chroot`, che gira **dopo** il
+ripristino del cache e **prima** del suo salvataggio:
+
+1. rimette `root:root` sulle directory di sistema (`/usr /bin /sbin /lib /etc
+   /var/lib/dpkg /var/lib/apt /var/cache/apt /opt …`);
+2. ripristina i bit setuid/setgid dei binari privilegiati (`sudo`, `su`,
+   `passwd`, `mount`, `polkit-agent-helper-1`, `dbus-daemon-launch-helper`, …);
+3. riassegna `/var/cache/apt/archives/partial` e `/var/lib/apt/lists/partial`
+   all'utente `_apt` (è lui che deve scriverci);
+4. sistema `/home/user` (vedi §6.13.1);
+5. verifica e, se qualcosa non torna, **ferma la build** con
+   `VERIFICA FALLITA: il sistema costruito non è utilizzabile.`
+
+`auto/build` fa lo stesso controllo prima di `lb build`, ma **salta** `/home`,
+`/tmp`, `/var/spool`, `/var/mail`, `/run` e `/dev`, dove un proprietario non-root
+è legittimo.
+
+### 6.13.1 `user: /home/user: change directory failed: Permission denied`
+
+```
+*** user: /home/user: change directory failed: Permission denied
+Logging in with home = "/"
+-bash: /home/user/.bash_profile: Permesso negato
+```
+
+La home dell'utente live c'era ma non era attraversabile/leggibile per `user`
+(proprietario sbagliato, oppure modo troppo restrittivo): la shell parte lo
+stesso con `HOME=/`, quindi non è fatale, ma è sbagliata. Cause: lo stesso
+`chown -R` che ha colpito `/usr`, e in un caso il `chown -R 0:0 chroot` fatto a
+mano, che tocca anche `/home`.
+
+Ora `0300-create-user.hook.chroot` crea la home con `install -d -m 0755 -o user
+-g <gruppo>` e ci riapplica proprietario e permessi (`u+rwX,go+rX`), e l'hook
+`0450` lo riverifica (la build fallisce se `/home/user` non è di `user`).
+
+### 6.13.2 Se hai ancora un'ISO con questo difetto
+
+Va **ricostruita** (non si ripara da dentro). Per essere sicuro che chroot e
+cache siano puliti, butta **solo** il cache del chroot: i pacchetti già scaricati
+restano (`cache/packages*`), quindi non riscarichi nulla.
 
 ```bash
-sudo chown -R 0:0 chroot cache
+git pull
+rm -rf cache/chroot          # il cache sporco viene rigenerato dai pacchetti
 rm -f .build/chroot_* .build/binary*
 ./build-docker.sh
 ```
+
+Se hai toccato i file a mano e vuoi la certezza assoluta:
+`sudo chown -R 0:0 chroot cache` (l'hook rimetterà comunque a posto i setuid).
 
 ### 6.14 `zinimalos-install` dice "debian-installer non trovato"
 
