@@ -1,0 +1,55 @@
+#!/bin/sh
+# ZinimalOS — verifica che il sistema costruito sia utilizzabile.
+#
+# Serve a intercettare PRIMA di produrre l'ISO un difetto che altrimenti si
+# scopre solo avviando la live, dove costa un'altra build:
+#
+#   sudo: /usr/bin/sudo is owned by uid 1000, should be 0
+#   apt:  open (13: Permission denied)
+#
+# Causa storica: un `chown -R utente` sul chroot. Se il proprietario o il bit
+# setuid dei binari critici sono sbagliati, la build si ferma qui.
+
+set -eu
+
+fail=0
+error() { echo "ERRORE: $*" >&2; fail=1; }
+
+# --- Proprietario e permessi dei binari critici ------------------------------
+for f in /usr/bin/sudo /usr/bin/systemctl /usr/bin/apt /usr/bin/dpkg \
+         /usr/bin/passwd /bin/sh /usr/bin/dash; do
+  if [ ! -e "$f" ]; then
+    error "manca $f"
+    continue
+  fi
+  uid="$(stat -c %u "$f")"
+  if [ "$uid" != "0" ]; then
+    error "$f appartiene a uid $uid (deve essere 0: altrimenti sudo/apt si rompono)"
+  fi
+done
+
+if [ -e /usr/bin/sudo ] && [ ! -u /usr/bin/sudo ]; then
+  error "/usr/bin/sudo non ha il bit setuid: 'sudo' rifiuterà di partire"
+fi
+
+# --- Comandi di base attesi nella live --------------------------------------
+rebo=""
+for f in /sbin/reboot /usr/sbin/reboot /bin/systemctl /usr/bin/systemctl; do
+  [ -e "$f" ] && rebo="$f" && break
+done
+[ -n "$rebo" ] || error "nessun comando di riavvio (/sbin/reboot o systemctl)"
+
+# --- Directory che apt deve poter scrivere ----------------------------------
+for d in /var/lib/apt/lists /var/cache/apt/archives /var/lib/dpkg; do
+  [ -d "$d" ] || continue
+  uid="$(stat -c %u "$d")"
+  [ "$uid" = "0" ] || error "$d appartiene a uid $uid (apt fallirebbe con 'open (13: Permission denied)')"
+done
+
+if [ "$fail" = "1" ]; then
+  echo "VERIFICA FALLITA: il sistema costruito non è utilizzabile." >&2
+  echo "                 Rimedi: sudo chown -R 0:0 chroot cache, poi ricostruisci." >&2
+  exit 1
+fi
+
+echo "Verifica sistema: OK (sudo setuid + owner root, apt scrivibile, riavvio presente)"
