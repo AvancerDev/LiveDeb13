@@ -95,8 +95,8 @@ wpasupplicant
 wireless-regdb
 
 # --- Info di sistema / branding ---
-# fastfetch: banner con logo e info di sistema all'accesso (vedi
-# config/includes.chroot/etc/profile.d/00-zinimalos-welcome.sh)
+# fastfetch: logo del sistema + info di sistema, eseguito a mano `fastfetch`
+# (config: config/includes.chroot/etc/fastfetch/config.jsonc)
 fastfetch
 
 # --- Utilità live / rescue ---

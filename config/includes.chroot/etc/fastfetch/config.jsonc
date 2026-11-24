@@ -1,12 +1,16 @@
-// ZinimalOS — configurazione fastfetch, mostrata all'accesso sulla console.
+// ZinimalOS — configurazione di fastfetch.
 // File: /etc/fastfetch/config.jsonc
-// Il logo ASCII del sistema lo stampa /etc/profile.d/00-zinimalos-welcome.sh
-// (a colori), quindi qui il logo di fastfetch è disattivato.
+//
+// Il logo del sistema è il file ASCII /usr/share/zinimalos/logo-ascii.txt:
+// viene mostrato a sinistra delle info quando esegui `fastfetch`.
+// All'accesso NON viene eseguito automaticamente: si vede soltanto il MOTD
+// (/etc/motd) e, prima del login, il logo piccolo di /etc/issue.
+//
 // Moduli e sintassi: https://github.com/fastfetch-cli/fastfetch/wiki/Configuration
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
-    "type": "none"
+    "source": "/usr/share/zinimalos/logo-ascii.txt"
   },
   "display": {
     "separator": " : "

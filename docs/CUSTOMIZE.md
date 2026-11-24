@@ -110,50 +110,50 @@ chmod +x config/includes.chroot/usr/local/bin/mio-script
 | Cosa | File |
 |---|---|
 | Logo PNG (512×512) | `config/includes.chroot/usr/share/zinimalos/logo.png` |
-| Logo ASCII (console) | `config/includes.chroot/usr/share/zinimalos/logo-ascii.txt` |
-| Schermata pre-login (`/etc/issue`) | `config/includes.chroot/etc/issue` |
+| Logo ASCII (per `fastfetch`) | `config/includes.chroot/usr/share/zinimalos/logo-ascii.txt` |
+| Logo piccolo pre-login (`/etc/issue`) | `config/includes.chroot/etc/issue` |
 | Anteprima per il README | `docs/images/zinimalos-logo.png` |
 
-Per sostituire il logo: rimpiazza `logo.png` (meglio ≤ 512×512, PNG, con
-`-colors 128` per non gonfiare l’ISO) e, se vuoi cambiare anche l’arte su
-console, `logo-ascii.txt` (ogni riga è stampata così com’è; meglio restare
-sotto le 40 colonne di larghezza).
+Dove compare il logo:
 
-`/etc/issue` è ciò che `agetty` mostra **prima** del login, quindi il logo
-compare già sulla schermata di accesso, senza attendere il banner.
-
-## Banner fastfetch all’accesso
-
-Il pacchetto `fastfetch` è incluso (in `packages.list.chroot` e
-`packages.list.chroot_install`): all’accesso lo script di welcome stampa prima
-il logo ASCII a colori, poi le info di sistema.
-
-| Cosa | File |
+| Momento | Cosa si vede |
 |---|---|
-| Configurazione (moduli, ordine, righe custom) | `config/includes.chroot/etc/fastfetch/config.jsonc` |
-| Script che stampa logo + banner | `config/includes.chroot/etc/profile.d/00-zinimalos-welcome.sh` |
+| Schermata di login (prima di autenticarsi) | logo ASCII **piccolo**, in alto a sinistra (`/etc/issue`) |
+| Dopo il login | **solo il testo** del MOTD (`/etc/motd`) |
+| `fastfetch` lanciato a mano | logo ASCII a sinistra + info di sistema a destra |
 
-Personalizzare i moduli: modifica l’array `modules` nel `.jsonc`. Per esempio
-per aggiungere la temperatura o togliere i colori finali:
+Il banner di fastfetch **non** viene eseguito automaticamente: all’accesso si
+vede solo il MOTD, senza rallentamenti né output inatteso (utile anche per
+`ssh`, `scp` e sessioni non interattive).
 
-```jsonc
-"modules": ["title", "os", "kernel", "uptime", "cpu", "gpu", "cputemp", "memory"]
+Per sostituire il logo:
+
+```bash
+# PNG (≤ 512×512, pochi colori per non gonfiare l'ISO)
+convert nuovo.png -resize 512x512 -colors 128 -strip \
+  config/includes.chroot/usr/share/zinimalos/logo.png
+
+# ASCII su console (una riga di testo = una riga di logo, max ~32 colonne)
+$EDITOR config/includes.chroot/usr/share/zinimalos/logo-ascii.txt
+$EDITOR config/includes.chroot/etc/issue
 ```
 
-Elenco completo dei moduli: <https://github.com/fastfetch-cli/fastfetch/wiki/Configuration>.
+## Banner fastfetch
 
-Comportamento dello script di welcome:
+`fastfetch` è installato (in `packages.list.chroot` e
+`packages.list.chroot_install`) e la sua configurazione è in
+`config/includes.chroot/etc/fastfetch/config.jsonc`:
 
-- si attiva solo su **shell interattiva con terminale** (tty1 in autologin,
-  `login`, `ssh`), mai per script, `scp`, cron o comandi non interattivi;
-- una sola volta per sessione;
-- disattivazione al volo: `export ZINIMALOS_NO_WELCOME=1`
-  (per disattivarlo sempre aggiungi quella riga a
-  `config/includes.chroot/etc/profile.d/`);
-- se la configurazione desse problemi, ricade su `fastfetch` senza opzioni.
+- **logo**: viene da `/usr/share/zinimalos/logo-ascii.txt`;
+- **moduli**: `title`, `os`, `host`, `kernel`, `uptime`, `packages`, `shell`,
+  `terminal`, `cpu`, `gpu`, `memory`, `disk`, `localip`, `colors`, più due
+  righe custom con nome e crediti.
 
-Per vedere il banner senza riavviare: `fastfetch` oppure
-`fastfetch --config /etc/fastfetch/config.jsonc`.
+Per personalizzare i moduli modifica l’array `modules` nel `.jsonc`; elenco
+completo su <https://github.com/fastfetch-cli/fastfetch/wiki/Configuration>.
+
+Per vedere il risultato senza riavviare: `fastfetch`
+(oppure `fastfetch --config /etc/fastfetch/config.jsonc`).
 
 ## Crediti: comando `made by`
 
