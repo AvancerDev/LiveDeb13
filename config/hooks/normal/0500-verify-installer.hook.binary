@@ -1,0 +1,81 @@
+#!/bin/sh
+# ZinimalOS — verifica che l'installer dentro l'ISO sia davvero avviabile.
+#
+# Gira con CWD = binary/ (vedi scripts/build/binary_hooks di live-build), quindi
+# i percorsi sono quelli che si vedono dal menu di avvio: /install/vmlinuz,
+# /install/initrd.gz, /live/vmlinuz, ecc.
+#
+# Perché serve: la voce "Start installer" del menu (isolinux e grub) è scritta
+# da live-build PRIMA di sapere se i file corrispondenti esistono. Se ne manca
+# uno (stadio `installer_debian-installer` fallito, download troncato, `ln -s`
+# su binary/dists già esistente) l'ISO si costruisce lo stesso e al boot la
+# voce del menu **non fa nulla** oppure torna al menu: un bug che si scopre solo
+# con la chiavetta in mano. Qui lo scopre la build.
+
+set -eu
+
+fail=0
+error() { echo "ERRORE: $*" >&2; fail=1; }
+
+# --- 1. I due file che il menu di avvio carica -------------------------------
+for f in install/vmlinuz install/initrd.gz; do
+  if [ ! -e "$f" ]; then
+    error "manca $f: la voce \"Start installer\" del menu di avvio non partirà"
+    continue
+  fi
+  if [ ! -s "$f" ]; then
+    error "$f è vuoto"
+    continue
+  fi
+  size="$(stat -c %s "$f")"
+  if [ "$size" -lt 500000 ]; then
+    error "$f è di soli $size byte: download interrotto o file troncato"
+  fi
+done
+
+# --- 2. Placeholder dei template rimasti non sostituiti ---------------------
+# Se live-build non ha sostituito @KERNEL_DI@/@INITRD_DI@, il menu cerca un
+# file chiamato letteralmente "@/install/vmlinuz": non parte e non spiega nulla.
+for f in isolinux/*.cfg boot/grub/grub.cfg boot/grub/*.cfg; do
+  [ -f "$f" ] || continue
+  if grep -q '@[A-Z_]*@' "$f"; then
+    error "$f contiene placeholder non sostituiti ($(grep -o '@[A-Z_]*@' "$f" | sort -u | tr '\n' ' '))"
+  fi
+done
+
+# --- 3. Ogni percorso /install/... citato dai menu deve esistere -------------
+# Prende kernel e initrd da qualunque menu (isolinux, grub BIOS, grub EFI).
+refs="$(grep -rhoE '(^|[ ="])/install(/[A-Za-z0-9._-]+)*' isolinux boot 2>/dev/null \
+        | tr -d ' ="' | sort -u || true)"
+for r in $refs; do
+  # /install/ è una directory: basta che esista
+  [ -e ".${r}" ] || error "il menu di avvio usa ${r}, ma nell'ISO non esiste"
+done
+
+# --- 4. L'installer ha gli udeb? (serve a live-installer per partire) -------
+udebs="$(find dists -name '*.udeb' 2>/dev/null | wc -l || true)"
+if [ "${udebs:-0}" -lt 1 ]; then
+  echo "==> Avviso: nessun .udeb in dists/ (l'installer userà la rete)"
+fi
+
+# --- 5. La voce di menu esiste davvero? ------------------------------------
+if ! grep -qsi 'install' isolinux/install.cfg 2>/dev/null && \
+   ! grep -qsi 'install' boot/grub/grub.cfg 2>/dev/null; then
+  error "nessuna voce di installazione nel menu di avvio"
+fi
+
+if [ "$fail" = "1" ]; then
+  cat >&2 <<'AVVISO'
+INSTALLER NON AVVIABILE: l'ISO verrebbe costruita con la voce "Start installer"
+che non funziona. Rimedi:
+  1) ricostruisci con lo stadio binary pulito:
+       rm -rf .build/binary_* .build/binary dist binary
+       ./build-docker.sh
+  2) se l'errore parla di "binary/dists/... File exists", è il `ln -s` di
+     live-build su un residuo della build precedente (già gestito da
+     auto/build: rimuove binary/dists/<dist>/<nome> prima di partire).
+AVVISO
+  exit 1
+fi
+
+echo "Verifica installer: OK (install/vmlinuz + initrd.gz presenti, menu coerente)"

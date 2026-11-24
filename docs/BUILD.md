@@ -754,6 +754,44 @@ Ora `zinimalos-install`:
 - spiega i passi (riavvio → voce *Install*);
 - con `zinimalos-install --reboot` riavvia subito.
 
+### 6.15 "Start installer" nel menu di avvio non fa nulla
+
+La voce è scritta da live-build **prima** di sapere se i file caricati esistono.
+Le voci di installazione (`install_text.cfg`/`install_gui.cfg`) contengono:
+
+```
+label installstart
+ menu label Start ^installer
+ linux /install/vmlinuz
+ initrd /install/initrd.gz
+```
+
+Quei due file sono prodotti dallo stadio `lb installer_debian-installer` e
+copiati in `binary/install/`. Se mancano (stadio installer saltato dopo che
+`binary/` è stata rigenerata, download troncato, `ln -s` fallito su
+`binary/dists/…`), la voce resta nel menu e al boot non fa nulla: nessun errore
+utile, solo il menu che torna.
+
+Da ora:
+
+- l'hook `config/hooks/normal/0500-verify-installer.hook.binary` (gira dentro
+  `binary/` a fine stadio binary) verifica che `install/vmlinuz` e
+  `install/initrd.gz` esistano, non siano vuoti/troncati, che i menu non abbiano
+  placeholder `@KERNEL_DI@` rimasti e che **ogni** percorso `/install/…` citato
+  dai menu esista davvero. In caso contrario la build si ferma con
+  `INSTALLER NON AVVIABILE`;
+- `auto/build`, se `.build/installer` c'è ma `binary/install/vmlinuz` no, toglie
+  lo stage file e riesegue lo stadio installer;
+- `auto/build` rimuove i residui `binary/dists/<dist>/<nome>` che fanno fallire
+  `ln: failed to create symbolic link 'binary/dists/testing/trixie': File
+  exists`.
+
+Riga attesa nel log:
+
+```
+Verifica installer: OK (install/vmlinuz + initrd.gz presenti, menu coerente)
+```
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

@@ -102,6 +102,28 @@ if [ -d chroot ] && [ "$(id -u)" = "0" ]; then
   fi
 fi
 
+# --- Installer (d-i) dentro l'ISO -------------------------------------------
+# live-build salta lo stadio `installer` se trova .build/installer, ma i file
+# che il menu di avvio carica (/install/vmlinuz, /install/initrd.gz) vivono in
+# binary/: se binary/ viene rigenerata e lo stadio installer viene saltato, la
+# voce "Start installer" resta nel menu e non fa nulla al boot.
+# Qui lo rileviamo e forziamo la riesecuzione dello stadio installer (costa
+# ~200 MB di udeb, quindi solo quando serve davvero).
+if [ -e .build/installer ] && [ ! -s binary/install/vmlinuz ]; then
+  echo "==> Installer assente da binary/: rieseguo lo stadio installer"
+  rm -f .build/installer .build/installer_debian-installer .build/installer_preseed
+fi
+
+# --- Residuo che fa fallire lo stadio binary --------------------------------
+# live-build crea binary/dists/<dist>/<nome> con `ln -s` senza -f: se la
+# cartella esiste già la build muore a metà con
+#   ln: failed to create symbolic link 'binary/dists/testing/trixie': File exists
+for _l in binary/dists/*/trixie binary/dists/*/testing; do
+  [ -e "$_l" ] || [ -L "$_l" ] || continue
+  echo "==> Rimuovo ${_l} (residuo della build precedente: blocca ln -s)"
+  rm -rf "$_l"
+done
+
 if ! lb build noauto "$@"; then
   cat >&2 <<'EOF'
 
