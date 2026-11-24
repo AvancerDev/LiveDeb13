@@ -572,10 +572,32 @@ avviso). Per ripristinare la versione ufficiale:
 sudo rm /etc/issue && sudo apt install --reinstall zinimalos-branding
 ```
 
-Se ti capita questo errore con una versione **vecchia** del pacchetto, la build
-è morta a metà e il chroot ha il pacchetto in stato inconsistente. L'hook
-`0400` ora lo ripulisce da sé (`dpkg --purge --force-all` se lo stato non è
-`install ok installed`); se vuoi essere sicuro, riesegui gli stadi del chroot:
+### Perché è potuto riapparire (e perché non riapparirà)
+
+Il rimedio al pacchetto non bastava: live-build **copia** i file nel chroot ma
+non cancella quelli che non ci sono più. Dopo una build fallita, in
+`chroot/opt/zinimalos/packages/` restavano **due** `.deb`:
+
+```
+zinimalos-branding_1.0.202611241359_all.deb   ← vecchio, con /etc/issue dentro
+zinimalos-branding_1.0.202611241409_all.deb   ← corretto
+```
+
+L'hook installava il primo che trovava (`1359`, il vecchio) e l'errore tornava
+identico, nonostante il pacchetto fosse stato corretto. Tre contromisure, tutte
+attive:
+
+1. nella ISO il pacchetto ha **nome fisso** `zinimalos-branding.deb`: non si
+   accumulano più versioni;
+2. l'hook installa **solo il più recente** e cancella gli altri `.deb` prima di
+   installare;
+3. dopo l'installazione l'hook verifica che la versione installata sia quella
+   del `.deb` e che `/etc/issue` contenga `ZinimalOS`, altrimenti ferma la build.
+
+Se ti capita con una versione **vecchia** del pacchetto, la build è morta a metà
+e il chroot ha il pacchetto in stato inconsistente. L'hook `0400` ora lo
+ripulisce da sé (`dpkg --purge --force-all` se lo stato non è uno di quelli
+puliti); se vuoi essere sicuro, riesegui gli stadi del chroot:
 
 ```bash
 rm -f .build/chroot_* .build/binary*

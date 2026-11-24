@@ -59,6 +59,16 @@ find "$STAGE" -type d -exec chmod 0755 {} +
 find "$STAGE" -type f ! -path "$STAGE/usr/local/bin/*" -exec chmod 0644 {} + 2>/dev/null || true
 chmod 0755 "$STAGE"/usr/local/bin/* 2>/dev/null || true
 
+# Guardia anti-regressione: questi file appartengono a pacchetti Debian
+# (base-files) e non possono stare nel nostro pacchetto, altrimenti dpkg
+# rifiuta l'installazione con "trying to overwrite '/etc/issue'".
+for _f in etc/issue etc/issue.net etc/motd etc/hostname etc/hosts; do
+  if [ -e "$STAGE/$_f" ]; then
+    die "$PAYLOAD/$_f non può stare nel pacchetto: appartiene a base-files." \
+        "Mettilo in $PAYLOAD/usr/share/zinimalos/ e applicalo dal postinst."
+  fi
+done
+
 # Se la chiave pubblica non c'è ancora (setup-gpg.sh non eseguito), il
 # pacchetto non deve installare un repository che apt non saprebbe verificare.
 if [ ! -s "$STAGE/etc/apt/keyrings/zinimalos.gpg" ]; then
@@ -103,9 +113,13 @@ DEB="$OUT/${PKG}_${VERSION}_all.deb"
 dpkg-deb --root-owner-group -Zxz --build "$STAGE" "$DEB" >/dev/null
 
 # --- Copia nella ISO ---------------------------------------------------------
+# Nome FISSO (senza versione) di proposito: live-build copia
+# config/includes.chroot/ nel chroot ma non cancella mai i file rimossi, quindi
+# con un nome versionato le build successive accumulavano più .deb e l'hook
+# poteva installare quello vecchio (bug: "trying to overwrite '/etc/issue'").
 rm -rf "$ISO_DEB_DIR"
 mkdir -p "$ISO_DEB_DIR"
-cp "$DEB" "$ISO_DEB_DIR"/
+cp "$DEB" "$ISO_DEB_DIR/zinimalos-branding.deb"
 
 say "==> Pacchetto: ${DEB#$ROOT/}"
 say "    versione $VERSION, $(du -h "$DEB" | cut -f1), $(du -sk "$STAGE" | cut -f1) KB installati"

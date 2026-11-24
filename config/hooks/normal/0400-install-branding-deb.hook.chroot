@@ -2,56 +2,88 @@
 # ZinimalOS — installa nel chroot il pacchetto del branding.
 #
 # Il logo, /etc/issue, il MOTD, la configurazione di fastfetch e gli script
-# made / made by / zinimalos-info NON vengono più copiati a mano da
+# made / made by / zinimalos-info NON vengono copiati a mano da
 # config/includes.chroot/: arrivano dal pacchetto .deb costruito da
 # packaging/build-deb.sh (che auto/build esegue prima di ogni build).
 #
 # Perché così: l'ISO contiene esattamente il pacchetto che le altre macchine
-# scaricano con `apt upgrade`, e i file sono tracciati da dpkg (un aggiornamento
-# può quindi sostituirli in modo pulito).
+# scaricano con `apt upgrade`, e i file sono tracciati da dpkg.
 #
-# Se il .deb non c'è, la build si ferma: un'ISO senza branding sarebbe
-# silenziosamente sbagliata.
+# ATTENZIONE (bug storico): live-build copia config/includes.chroot/ nel chroot
+# ma non elimina mai i file che non ci sono più. Nelle build precedenti qui
+# restavano più .deb contemporaneamente (es. ..._1359 e ..._1409) e veniva
+# installato quello sbagliato, riportando in vita vecchi bug. Da qui in poi il
+# file ha un nome FISSO (zinimalos-branding.deb) e questo hook:
+#   * installa solo il pacchetto più recente;
+#   * cancella qualunque altro .deb rimasto.
 
 set -eu
 
-PKGDIR=/opt/zinimalos/packages
+PKGDIR="${ZINIMALOS_PKG_DIR:-/opt/zinimalos/packages}"
 
+die() { echo "ERRORE: $*" >&2; exit 1; }
+
+[ -d "$PKGDIR" ] || die "manca $PKGDIR (esegui ./packaging/build-deb.sh, oppure ./auto/build che lo fa da sé)"
+
+# --- Scelta del pacchetto: nome fisso, altrimenti il più recente -------------
+NEWEST=""
+if [ -f "$PKGDIR/zinimalos-branding.deb" ]; then
+  NEWEST="$PKGDIR/zinimalos-branding.deb"
+else
+  for deb in "$PKGDIR"/*.deb; do
+    [ -f "$deb" ] || continue
+    if [ -z "$NEWEST" ] || [ "$deb" -nt "$NEWEST" ]; then
+      NEWEST="$deb"
+    fi
+  done
+fi
+[ -n "$NEWEST" ] || die "nessun .deb in $PKGDIR"
+
+# Cancella tutto il resto: residui di build precedenti non devono poter essere
+# installati al posto della versione corrente.
+for deb in "$PKGDIR"/*.deb; do
+  [ -f "$deb" ] || continue
+  if [ "$deb" != "$NEWEST" ]; then
+    echo "Rimuovo .deb obsoleto: $(basename "$deb")"
+    rm -f "$deb"
+  fi
+done
+
+echo "Pacchetto scelto: $(basename "$NEWEST") (versione $(dpkg-deb -f "$NEWEST" Version))"
+
+# --- Stato dpkg coerente -----------------------------------------------------
 # Se una build precedente è morta a metà (per esempio per un conflitto su
 # /etc/issue), dpkg può avere il pacchetto in stato inconsistente: qualunque
 # tentativo successivo fallirebbe con "package is in a very bad inconsistent
 # state". Lo ripuliamo prima di reinstallarlo.
 _status="$(dpkg-query -W -f='${Status}' zinimalos-branding 2>/dev/null || true)"
 case "$_status" in
-  ""|"install ok installed") : ;;
+  ""|"install ok installed"|"install ok not-installed"|"deinstall ok config-files"|"deinstall ok not-installed")
+    : ;;
   *)
     echo "Stato dpkg incoerente per zinimalos-branding ($_status): lo ripulisco."
     dpkg --purge --force-all zinimalos-branding >/dev/null 2>&1 || true
     ;;
 esac
 
-installed=0
-for deb in "$PKGDIR"/*.deb; do
-  [ -f "$deb" ] || continue
-  echo "Installo il pacchetto: $(basename "$deb")"
-  dpkg -i "$deb"
-  installed=1
+# --- Installazione -----------------------------------------------------------
+dpkg -i "$NEWEST"
+
+# --- Verifiche ---------------------------------------------------------------
+installed_version="$(dpkg-query -W -f='${Version}' zinimalos-branding 2>/dev/null || true)"
+deb_version="$(dpkg-deb -f "$NEWEST" Version)"
+[ "$installed_version" = "$deb_version" ] || \
+  die "installata la versione '$installed_version', attesa '$deb_version'"
+
+for f in /etc/issue /etc/motd /etc/zinimalos-release \
+         /etc/fastfetch/config.jsonc /usr/share/zinimalos/logo-ascii.txt \
+         /usr/share/zinimalos/logo.png /usr/local/bin/made-by; do
+  [ -e "$f" ] || die "manca $f dopo l'installazione del pacchetto"
 done
 
-if [ "$installed" = "0" ]; then
-  echo "ERRORE: nessun .deb in $PKGDIR." >&2
-  echo "        Esegui ./packaging/build-deb.sh (oppure ./auto/build, che lo fa da sé)." >&2
-  exit 1
-fi
+grep -q "ZinimalOS" /etc/issue || die "/etc/issue non contiene il branding ZinimalOS (pacchetto sbagliato?)"
 
 # I .deb non devono restare nell'immagine finale
 rm -rf "$PKGDIR"
 
-# Verifica minima: senza questi file l'ISO non è quella giusta
-for f in /etc/issue /etc/motd /etc/zinimalos-release \
-         /etc/fastfetch/config.jsonc /usr/share/zinimalos/logo-ascii.txt \
-         /usr/share/zinimalos/logo.png; do
-  [ -e "$f" ] || { echo "ERRORE: manca $f dopo l'installazione del pacchetto." >&2; exit 1; }
-done
-
-echo "Branding ZinimalOS installato: $(sed -n 's/^ZINIMALOS_VERSION="\(.*\)"/\1/p' /etc/zinimalos-release 2>/dev/null || true)"
+echo "Branding ZinimalOS ${installed_version} installato (issue + motd applicati dal postinst)."

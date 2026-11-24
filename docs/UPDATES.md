@@ -33,7 +33,11 @@ Tre pezzi, ognuno con un compito:
 | repository | `make publish` | inserisce il `.deb` in un repo apt firmato e lo pubblica |
 | consumo | `sudo apt upgrade` | le macchine installate prendono il pacchetto nuovo |
 
-`live-build` **non costruisce** i pacchetti: li installa. La costruzione la fa
+`live-build` **non costruisce** i pacchetti: li installa. Nella ISO il `.deb`
+ha nome fisso `zinimalos-branding.deb` (`config/includes.chroot/opt/zinimalos/
+packages/`) e l'hook `0400` installa solo quello, scartando eventuali `.deb`
+rimasti da build precedenti — live-build copia i file nel chroot ma non li
+cancella mai, e una versione vecchia può reintrodurre bug già corretti. La costruzione la fa
 `dpkg-deb` (dentro `packaging/build-deb.sh`), il repository lo gestisce
 `reprepro`.
 
