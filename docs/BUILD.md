@@ -680,7 +680,9 @@ bit **setuid/setgid**: un `chown -R 0:0` senza ripristinare i modi lascia
 `sudo` di root ma senza setuid (`sudo: setuid must be root-owned and setuid bit
 set`).
 
-Da ora la riparazione avviene **dentro** il chroot, con l'hook
+Da ora la riparazione avviene **sempre** — anche quando non trova file con uid
+sbagliato, perché un `chown` può aver lasciato `sudo` di root ma **senza
+setuid** — **dentro** il chroot, con l'hook
 `config/hooks/normal/0450-verify-system.hook.chroot`, che gira **dopo** il
 ripristino del cache e **prima** del suo salvataggio:
 
@@ -693,6 +695,11 @@ ripristino del cache e **prima** del suo salvataggio:
 4. sistema `/home/user` (vedi §6.13.1);
 5. verifica e, se qualcosa non torna, **ferma la build** con
    `VERIFICA FALLITA: il sistema costruito non è utilizzabile.`
+
+È successo davvero il 2026-11-24 18:18: la build si è fermata con
+`ERRORE: /usr/bin/sudo non ha il bit setuid` invece di produrre un'ISO con
+`sudo` rotto. In quel caso basta rilanciare `./build-docker.sh`: il chroot
+viene ripristinato dal cache, riparato dall'hook e salvato pulito.
 
 `auto/build` fa lo stesso controllo prima di `lb build`, ma **salta** `/home`,
 `/tmp`, `/var/spool`, `/var/mail`, `/run` e `/dev`, dove un proprietario non-root
