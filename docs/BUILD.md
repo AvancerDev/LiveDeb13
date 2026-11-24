@@ -63,6 +63,37 @@ sudo make clean        # lb clean
 sudo make distclean    # lb clean --purge (cancella anche la cache)
 ```
 
+### 3.1 Ho modificato `config/` ma la ISO è identica
+
+live-build **salta** ogni stadio che ha già il suo *stage file* in `.build/`
+(nome = nome dello script: `chroot_hooks`, `binary_rootfs`, …) e stampa
+`W: Skipping …, already done`. Di conseguenza una modifica a
+`config/includes.chroot/` (logo, MOTD, `/etc/issue`, config di fastfetch) non
+entrerebbe **mai** nell’immagine: la build riesce ma produce un’ISO identica
+alla precedente.
+
+Da questa versione `auto/build` se ne accorge da solo: se un file di`config/`
+è più recente dell’ultima build, rimuove gli stage file di `chroot` e `binary`
+e li riesegue sul chroot esistente (**senza riscaricare pacchetti**).
+
+Se vuoi forzare a mano:
+
+```bash
+rm -f .build/chroot_* .build/binary*    # mirato: ~5 min, nessun download
+./build-docker.sh
+```
+
+oppure `./build-docker.sh --force`, che passa `--force` a `lb build` e fa
+rieseguire **tutti** gli stadi (più lento: anche bootstrap e reinstall dei
+pacchetti, sempre dalla cache locale).
+
+Verifica rapida che una modifica sia entrata nell’ISO senza riavviare la VM:
+
+```bash
+# la data dei file dentro il squashfs
+unsquashfs -ll binary/live/filesystem.squashfs | grep -E 'etc/issue|logo-ascii'
+```
+
 ## 4. Test in VM
 
 BIOS:

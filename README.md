@@ -236,6 +236,13 @@ Residuo dello stadio `binary` di una build interrotta. Rimedio senza
 riscaricare il chroot: `rm -rf binary && rm -f .build/*binary* && ./build-docker.sh`.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.10.
 
+**Ho modificato `config/` ma la ISO è identica?**
+live-build salta gli stadi già fatti (`W: Skipping …, already done`), quindi le
+modifiche a `config/includes.chroot/` non entrano nell’immagine. `auto/build`
+ora se ne accorge e riesegue chroot + binary da solo; per forzare a mano:
+`rm -f .build/chroot_* .build/binary*` (oppure `./build-docker.sh --force`).
+Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §3.1.
+
 **`Cannot stat source directory "chroot"`?**
 Build uccisa a metà: `.build/` dichiara completati stadi che non esistono più.
 Rimedio che **non riscarica nulla**: `rm -rf .build && ./build-docker.sh`

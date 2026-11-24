@@ -39,6 +39,34 @@ fi
 
 rm -f .build/config
 
+# --- Invalidazione automatica degli stadi quando la configurazione cambia -----
+# live-build salta ogni stadio che ha già il suo "stage file" in .build/ (il
+# nome è quello dello script: chroot_hooks, binary_rootfs, …). Di conseguenza
+# una modifica a config/includes.chroot/ (logo, motd, .bashrc…) NON entrerebbe
+# mai nella ISO: la build finirebbe identica alla precedente.
+# Qui, se qualche file di configurazione è più recente dell'ultima build,
+# togliamo gli stage file di chroot e binary: gli stadi vengono rieseguiti sul
+# chroot esistente (nessun riscaricamento) e la modifica finisce nell'immagine.
+if [ -d .build ]; then
+  NEWEST_STAGE="$(ls -t .build/* 2>/dev/null | grep -v '/config$' | grep -v '/lock$' | head -1 || true)"
+  if [ -n "${NEWEST_STAGE}" ]; then
+    CHANGED=0
+    for d in config/includes.chroot config/includes.binary config/package-lists \
+             config/hooks config/preseed config/archives config/bootloaders; do
+      [ -e "${d}" ] || continue
+      if [ -n "$(find "${d}" -newer "${NEWEST_STAGE}" -print -quit 2>/dev/null)" ]; then
+        CHANGED=1
+        break
+      fi
+    done
+    if [ "${CHANGED}" = "1" ]; then
+      echo "==> Configurazione più recente dell'ultima build: rieseguo chroot + binary"
+      echo "    (nessun pacchetto riscaricato: chroot/ e cache/ restano)"
+      rm -f .build/chroot_* .build/binary_* .build/binary
+    fi
+  fi
+fi
+
 if ! lb build noauto "$@"; then
   cat >&2 <<'EOF'
 
