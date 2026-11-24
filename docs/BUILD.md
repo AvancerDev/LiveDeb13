@@ -638,6 +638,63 @@ rm -f .build/chroot_* .build/binary*
 ./build-docker.sh
 ```
 
+### 6.13 `sudo: /usr/bin/sudo is owned by uid 1000, should be 0` e `open (13: Permission denied)` in live
+
+```
+sudo: /usr/bin/sudo is owned by uid 1000, should be 0
+sudo: setuid must be root-owned and setuid bit set
+apt: open (13: Permission denied)
+```
+
+Non sono due bug: sono lo **stesso** problema. Dentro l'ISO ci sono file che
+appartengono all'utente della macchina di build (uid 1000) invece che a root:
+
+- `sudo` si rifiuta di partire se il suo binario non è di root con il bit setuid
+  (controllo di sicurezza voluto);
+- `apt` scarica come utente `_apt`, che non può scrivere in
+  `/var/cache/apt/archives` o `/var/lib/apt/lists` se sono di uid 1000.
+
+La causa era in `build-docker.sh`: a fine build faceva
+`chown -R utente:utente ... chroot cache binary ...` per sbloccare git. Quei
+file finiscono **dentro** lo squashfs, e la build successiva riusava il chroot
+già "sporcato".
+
+Da ora:
+
+1. `build-docker.sh` fa `chown -R` solo su `.build`, `config` e `dist` (le uniche
+   cose che servono a git) e cambia il proprietario di `chroot`, `cache`,
+   `binary` **solo al primo livello**;
+2. `auto/build`, prima di `lb build`, verifica che in `chroot/` e `cache/` non ci
+   siano file non di root e in tal caso ripristina `root:root`:
+
+```
+==> File non di root in chroot/: ripristino root:root (la ISO sarebbe rotta)
+```
+
+Se hai ancora un'ISO con questo difetto, va **ricostruita** (non si ripara da
+dentro). Per essere sicuro che il chroot sia pulito:
+
+```bash
+sudo chown -R 0:0 chroot cache
+rm -f .build/chroot_* .build/binary*
+./build-docker.sh
+```
+
+### 6.14 `zinimalos-install` dice "debian-installer non trovato"
+
+Non è un errore di configurazione: **il Debian Installer non è dentro il sistema
+live**. È un kernel + initrd separati sull'ISO/USB, che si avviano solo dal menu
+di boot (voci *Install* / *Graphical install*). Da dentro la sessione live non
+esiste un comando per passare all'installer, quindi la versione precedente dello
+script falliva sempre.
+
+Ora `zinimalos-install`:
+
+- verifica che i file dell'installer siano presenti sul supporto montato
+  (`/run/live/medium/install/vmlinuz`, `initrd.gz`, …);
+- spiega i passi (riavvio → voce *Install*);
+- con `zinimalos-install --reboot` riavvia subito.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

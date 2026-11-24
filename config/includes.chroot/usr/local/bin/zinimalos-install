@@ -1,13 +1,72 @@
 #!/bin/sh
-# ZinimalOS — scorciatoia per avviare Debian Installer dal live
+# ZinimalOS — come installare il sistema su disco.
+#
+# Il Debian Installer NON è dentro il sistema live: è un kernel + initrd
+# separati che vivono sull'ISO/USB e si avviano SOLO dal menu di boot
+# (voci «Install» e «Graphical install»). Da dentro la sessione live non esiste
+# un comando per "passare" all'installer: per questo la versione precedente di
+# questo script falliva sempre con "debian-installer non trovato".
+#
+# Qui: verifichiamo che i file dell'installer siano davvero sul supporto
+# avviato e spieghiamo i passi esatti. Con --reboot riavvia subito.
+
 set -eu
-echo "Avvio Debian Installer (modalità testuale)..."
-echo "Se l'installer non parte, usa il menu di avvio: 'Install'."
-if command -v debian-installer >/dev/null 2>&1; then
-  exec sudo debian-installer "$@"
-elif [ -x /usr/lib/debian-installer/launcher ]; then
-  exec sudo /usr/lib/debian-installer/launcher "$@"
-else
-  echo "ERRORE: debian-installer non trovato. Riavvia e scegli 'Install' dal menu."
-  exit 1
+
+MEDIUM=""
+for d in /run/live/medium /lib/live/mount/medium /run/live/medium/live; do
+  if [ -d "$d" ]; then
+    MEDIUM="$d"
+    break
+  fi
+done
+
+FOUND=""
+for f in "$MEDIUM/install/vmlinuz" "$MEDIUM/install.amd/vmlinuz" \
+         "$MEDIUM/install/initrd.gz" "$MEDIUM/install.amd/initrd.gz"; do
+  [ -f "$f" ] && FOUND="$FOUND $f"
+done
+
+echo "ZinimalOS - installazione su disco"
+echo
+
+if [ -z "$MEDIUM" ]; then
+  echo "Non sembra una sessione live (nessun supporto montato)."
+  echo "Se il sistema è già installato, non c'è nulla da fare:"
+  echo "  sudo apt update && sudo apt upgrade   # per aggiornarlo"
+  exit 0
 fi
+
+if [ -n "$FOUND" ]; then
+  echo "Installer presente sul supporto ($MEDIUM):"
+  for f in $FOUND; do echo "  $f"; done
+else
+  echo "Installer non trovato sul supporto ($MEDIUM)."
+  echo "Il sistema live non contiene il Debian Installer al suo interno:"
+  echo "è un kernel separato che si avvia solo dal menu di boot dell'ISO."
+fi
+
+echo
+echo "Come installare:"
+echo "  1. sudo reboot"
+echo "  2. nel menu di avvio dell'ISO scegli «Install» (testuale)"
+echo "     oppure «Graphical install» (se presente)"
+echo "  3. segui le domande: il preseed di ZinimalOS risponde già a gran parte"
+echo
+echo "Note:"
+echo "  - il sistema installato è una copia del live: stessi pacchetti, logo e MOTD"
+echo "  - utente live: user / live, root: live; nell'installato scegli tu le password"
+echo "  - se il menu non mostra «Install», riavvia in modalità BIOS (legacy) o UEFI"
+echo "    a seconda di come hai preparato il supporto"
+echo
+
+case "${1:-}" in
+  --reboot|-r)
+    echo "Riavvio in corso..."
+    exec sudo reboot
+    ;;
+  -h|--help)
+    echo "Uso: zinimalos-install [--reboot]"
+    ;;
+esac
+
+echo "Per riavviare subito: zinimalos-install --reboot"

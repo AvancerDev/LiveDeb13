@@ -2,7 +2,7 @@ Benvenuto su ZinimalOS — Debian 13 (trixie) Minimal Live + Installer
 =====================================================================
 
 Utente live:  user / live   (sudo senza password)
-Installer:    esegui `zinimalos-install` oppure scegli "Install" dal menu di avvio
+Installer:    riavvia e scegli "Install" nel menu di avvio (`zinimalos-install` spiega)
 Info sistema: `zinimalos-info`  |  banner: `fastfetch`
 Crediti:      `made by`  →  AvancerDev / ZinimalOS
 

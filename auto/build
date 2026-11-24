@@ -82,6 +82,23 @@ if [ -d .build ]; then
   fi
 fi
 
+# --- Proprietà dei file nel chroot --------------------------------------------
+# Se in chroot/ ci sono file che non appartengono a root (tipico dopo un
+# `chown -R utente` fatto per sbloccare git, o dopo una build interrotta), la
+# ISO che ne deriva è ROTTA in modo silenzioso:
+#   sudo: /usr/bin/sudo is owned by uid 1000, should be 0   (sudo non parte)
+#   apt:  open (13: Permission denied)                      (cache non scrivibile)
+# Qui li riportiamo a root:root prima di costruire.
+if [ -d chroot ] && [ "$(id -u)" = "0" ]; then
+  for _d in chroot cache; do
+    [ -d "$_d" ] || continue
+    if [ -n "$(find "$_d" -xdev ! -uid 0 -print -quit 2>/dev/null)" ]; then
+      echo "==> File non di root in ${_d}/: ripristino root:root (la ISO sarebbe rotta)"
+      chown -R 0:0 "$_d" || true
+    fi
+  done
+fi
+
 if ! lb build noauto "$@"; then
   cat >&2 <<'EOF'
 

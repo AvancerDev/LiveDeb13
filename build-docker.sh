@@ -194,10 +194,18 @@ ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
     # shellcheck disable=SC2086
     ./auto/build \${LB_ARGS:-}
 
-    # `lb config` scrive file generati DENTRO config/: senza questo chown
-    # l'albero resterebbe di root e git (utente) non potrebbe più aggiornarlo
-    # ("error: unable to create file config/...: Permesso negato").
-    chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary config dist 2>/dev/null || true
+    # lb config scrive file generati DENTRO config/: senza questo chown
+    # l'albero resterebbe di root e git (utente) non potrebbe piu aggiornarlo
+    # (errore: unable to create file config/..., Permesso negato).
+    #
+    # IMPORTANTE: chroot/, cache/ e binary/ NON vanno chownati ricorsivamente.
+    # Quei file finiscono DENTRO la ISO: con proprietario uid 1000 la live e
+    # rotta - sudo si rifiuta di partire (sudo is owned by uid 1000, should be 0)
+    # e apt fallisce con open (13: Permission denied) perche l'utente _apt non
+    # puo scrivere nelle directory di cache. Qui si cambia solo il primo livello,
+    # cosi restano rimovibili senza sudo.
+    chown -R \"\${HOST_UID}:\${HOST_GID}\" .build config dist 2>/dev/null || true
+    chown \"\${HOST_UID}:\${HOST_GID}\" chroot cache binary 2>/dev/null || true
     chown \"\${HOST_UID}:\${HOST_GID}\" ./*.iso 2>/dev/null || true
   " 2>&1 | tee build.log
 RC=${PIPESTATUS[0]}
@@ -207,9 +215,15 @@ set -e
 if [ "$RC" -ne 0 ]; then
   # anche una build fallita lascia chroot/, config/ ecc. di proprietà di root:
   # li restituiamo all'utente, altrimenti git e le build successive si bloccano
-  for _d in .build cache chroot binary config; do
+  # Ricorsivo solo dove serve a git; per chroot/ cache/ binary/ solo il primo
+  # livello (i file interni devono restare di root: vedi sopra).
+  for _d in .build config dist; do
     [ -e "$_d" ] || continue
     ${SUDO} chown -R "$HOST_UID:$HOST_GID" "$_d" 2>/dev/null || true
+  done
+  for _d in chroot cache binary; do
+    [ -e "$_d" ] || continue
+    ${SUDO} chown "$HOST_UID:$HOST_GID" "$_d" 2>/dev/null || true
   done
   # nessun lock deve sopravvivere a una build fallita
   ${SUDO} rm -f .lock 2>/dev/null || rm -f .lock 2>/dev/null || true
