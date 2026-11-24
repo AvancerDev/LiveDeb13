@@ -425,6 +425,50 @@ Da questa versione `./build-docker.sh` rimuove da solo un `.lock` orfano
 all’avvio e non ne lascia dietro se la build fallisce; `.lock` è in
 `.gitignore`.
 
+### 6.9 `Cannot stat source directory "chroot"` (dopo un kill forzato)
+
+```
+[2026-11-24 11:49:50] lb binary_rootfs
+P: Begin building root filesystem image...
+P: Preparing squashfs image...
+Cannot stat source directory "chroot" because No such file or directory
+E: An unexpected failure occurred, exiting...
+```
+
+Se la build viene uccisa (kill, container terminato, PC sospeso) live-build può
+lasciare in `.build/` i file di stage che dichiarano **completati** gli stadi del
+chroot, mentre `chroot/` non esiste più. La build allora salta tutto:
+
+```
+W: Skipping chroot_dpkg, already done
+W: Skipping chroot_install-packages.live, already done
+...
+```
+
+e arriva a `binary_rootfs` senza niente da impacchettare.
+
+Rimedio **senza riscaricare nulla** (non serve `--reset`, non serve toccare
+`cache/`):
+
+```bash
+rm -rf .build       # solo i file di stato; cache/, chroot/ e binary/ restano
+./build-docker.sh
+```
+
+`cache/` contiene i `.deb` già scaricati (`cache/packages.*`) e lo stage del
+bootstrap (`cache/bootstrap`), quindi la reinstallazione è locale e veloce.
+Da questa versione `./build-docker.sh` riconosce da sé l’incoerenza e rimuove
+`.build/` all’avvio.
+
+Per capire cosa c’è in cache prima di decidere:
+
+```bash
+du -sh cache/*         # bootstrap/, packages.bootstrap/, packages.chroot/…
+```
+
+Se `cache/` è vuota (mai completata una build), i pacchetti — firmware incluso —
+vanno riscaricati una volta; dalle build successive restano in cache.
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

@@ -114,6 +114,23 @@ apt_install() {
 }
 '
 
+# --- Stato incoerente: stage file in .build/ ma chroot/ assente --------------
+# Dopo un kill forzato (Ctrl-C ignorato, container ucciso, chiusura terminale)
+# live-build può lasciare i file di stage che dichiarano "già fatto" gli stadi
+# del chroot, mentre chroot/ non esiste più. La build salta tutto e muore su:
+#   lb binary_rootfs
+#   Cannot stat source directory "chroot" because No such file or directory
+# Rimediare solo a .build/ è sufficiente e NON riscarica nulla: la cache dei
+# .deb in cache/ resta intatta.
+if [ ! -d chroot ] && [ -d .build ]; then
+  _stale="$(ls -A .build 2>/dev/null | grep -vx 'config' | grep -vx 'lock' || true)"
+  if [ -n "${_stale}" ]; then
+    echo "==> Stato incoerente: file di stage in .build/ ma chroot/ assente"
+    echo "    (tipico dopo un kill forzato). Rimuovo .build/, cache/ resta intatta."
+    rm -rf .build 2>/dev/null || ${SUDO} rm -rf .build
+  fi
+fi
+
 # --- Lock orfano di live-build ----------------------------------------------
 # `lb <stage>` crea un file `.lock` nella directory di build (qui: la radice del
 # progetto) e lo rimuove solo se il processo esce "pulito". Dopo un Ctrl-C, un

@@ -230,6 +230,12 @@ sovrascrivi `APT_OPTIONS`: aggiorna con `git pull`. Se fallisce ancora,
 `grep -n 'Y/n\|Abort\|unexpected failure' build.log` e allegalo per l’analisi.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.6.
 
+**`Cannot stat source directory "chroot"`?**
+Build uccisa a metà: `.build/` dichiara completati stadi che non esistono più.
+Rimedio che **non riscarica nulla**: `rm -rf .build && ./build-docker.sh`
+(non serve `--reset`, la cache `cache/` non va toccata). Dettagli:
+[`docs/BUILD.md`](docs/BUILD.md) §6.9.
+
 **`E: lb bootstrap_cache already locked`?**
 Lock rimasto da una build interrotta (Ctrl-C, container ucciso): è il file
 `.lock` nella radice del progetto. Rimedio immediato:
