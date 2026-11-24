@@ -1,0 +1,12 @@
+// ZinimalOS — apt non deve mai fermarsi a chiedere cosa fare con i file di
+// configurazione modificati (es. /etc/issue o /etc/fastfetch/config.jsonc).
+// Con "confold" vince la versione già presente sul disco: l'aggiornamento di
+// ZinimalOS non sovrascrive le tue modifiche e non blocca apt in attesa di una
+// risposta (che in un upgrade non interattivo farebbe fallire tutto).
+//
+// Per ripristinare i file ufficiali: sudo apt install --reinstall zinimalos-branding
+// dopo aver spostato/rimosso la tua versione.
+Dpkg::Options {
+  "--force-confdef";
+  "--force-confold";
+};

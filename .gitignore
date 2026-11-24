@@ -27,3 +27,12 @@ build.log
 .vscode/
 .idea/
 *.code-workspace
+
+# Pacchettizzazione e repository apt (rigenerabili: make deb / make publish)
+/dist/
+/repo/
+config/includes.chroot/opt/zinimalos/packages/*.deb
+packaging/gpg-keyid
+
+# Chiave privata GPG: MAI nel repository
+*.asc

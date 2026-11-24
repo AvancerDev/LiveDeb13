@@ -13,7 +13,7 @@ QEMU_KVM := $(shell [ -w /dev/kvm ] && echo "-enable-kvm")
 OVMF_CODE := $(firstword $(wildcard /usr/share/OVMF/OVMF_CODE_4M.fd /usr/share/OVMF/OVMF_CODE.fd))
 OVMF_VARS_SRC := $(firstword $(wildcard /usr/share/OVMF/OVMF_VARS_4M.fd /usr/share/OVMF/OVMF_VARS.fd))
 
-.PHONY: help config build docker debug clean distclean run run-uefi usb check check-packages iso
+.PHONY: help config build docker debug clean distclean run run-uefi usb check check-packages iso deb publish
 
 help: ## Mostra questo help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -31,6 +31,12 @@ clean: ## Pulisce gli artefatti di build (lb clean)
 
 distclean: ## Pulizia completa (lb clean --purge: rimuove anche cache e stage)
 	sudo ./auto/clean --purge
+
+deb: ## Costruisce il pacchetto zinimalos-branding (.deb) in dist/
+	./packaging/build-deb.sh
+
+publish: ## Pubblica il pacchetto nel repository apt (reprepro + gh-pages)
+	./packaging/publish-repo.sh
 
 check-packages: ## Verifica in Debian 13 che i pacchetti delle liste esistano
 	./check-packages.sh

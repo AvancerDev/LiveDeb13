@@ -1,0 +1,3 @@
+# Opzioni di reprepro (conf/options).
+# verbose: mostra cosa viene fatto a ogni pubblicazione.
+verbose

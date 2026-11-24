@@ -1,0 +1,20 @@
+Package: @PKG@
+Version: @VERSION@
+Architecture: all
+Maintainer: AvancerDev <avancerdev@users.noreply.github.com>
+Installed-Size: @INSTALLED_SIZE@
+Section: misc
+Priority: optional
+Recommends: fastfetch
+Homepage: https://github.com/AvancerDev/ZinimalOS
+Description: ZinimalOS - logo, banner, MOTD e strumenti del sistema
+ Personalizzazioni di ZinimalOS, aggiornabili con "apt update && apt upgrade":
+  * logo di sistema (/usr/share/zinimalos/logo.png e logo-ascii.txt);
+  * riga mostrata prima del login (/etc/issue) e messaggio del giorno (/etc/motd);
+  * configurazione di fastfetch (/etc/fastfetch/config.jsonc, logo bianco);
+  * script made, made-by e zinimalos-info (/usr/local/bin);
+  * metadati di progetto (/etc/zinimalos-release);
+  * repository apt firmato del progetto (quando la chiave è presente).
+ .
+ Nessuna dipendenza obbligatoria: fastfetch è solo un consiglio, così il
+ pacchetto si installa anche offline con dpkg -i.

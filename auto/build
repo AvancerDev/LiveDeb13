@@ -39,6 +39,16 @@ fi
 
 rm -f .build/config
 
+# --- Pacchetto di branding (logo, /etc/issue, MOTD, config fastfetch, script) --
+# Questi file NON vengono più copiati da config/includes.chroot/: arrivano al
+# chroot solo tramite il pacchetto .deb (hook 0400-install-branding-deb).
+# Va quindi ricostruito a ogni build, così l'ISO contiene la versione corrente
+# — la stessa che le macchine installate scaricano con `apt upgrade`.
+if [ -x ./packaging/build-deb.sh ] && command -v dpkg-deb >/dev/null 2>&1; then
+  echo "==> Costruisco il pacchetto zinimalos-branding (.deb)"
+  ./packaging/build-deb.sh >/dev/null
+fi
+
 # --- Invalidazione automatica degli stadi quando la configurazione cambia -----
 # live-build salta ogni stadio che ha già il suo "stage file" in .build/ (il
 # nome è quello dello script: chroot_hooks, binary_rootfs, …). Di conseguenza
@@ -51,10 +61,15 @@ if [ -d .build ]; then
   NEWEST_STAGE="$(ls -t .build/* 2>/dev/null | grep -v '/config$' | grep -v '/lock$' | head -1 || true)"
   if [ -n "${NEWEST_STAGE}" ]; then
     CHANGED=0
-    for d in config/includes.chroot config/includes.binary config/package-lists \
-             config/hooks config/preseed config/archives config/bootloaders; do
+    for d in branding config/includes.chroot config/includes.binary \
+             config/package-lists config/hooks config/preseed config/archives \
+             config/bootloaders; do
       [ -e "${d}" ] || continue
-      if [ -n "$(find "${d}" -newer "${NEWEST_STAGE}" -print -quit 2>/dev/null)" ]; then
+      # config/includes.chroot/opt/zinimalos/packages è generato da
+      # packaging/build-deb.sh a ogni build: se lo contassimo, ogni build
+      # sembrerebbe "configurazione modificata" e rifarebbe tutto il chroot.
+      if [ -n "$(find "${d}" -path 'config/includes.chroot/opt' -prune -o \
+                 -newer "${NEWEST_STAGE}" -print -quit 2>/dev/null)" ]; then
         CHANGED=1
         break
       fi

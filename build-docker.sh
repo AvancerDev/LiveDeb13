@@ -197,7 +197,7 @@ ${SUDO} $RUNTIME run "${COMMON_ARGS[@]}" "${NET_OPTS[@]}" \
     # `lb config` scrive file generati DENTRO config/: senza questo chown
     # l'albero resterebbe di root e git (utente) non potrebbe più aggiornarlo
     # ("error: unable to create file config/...: Permesso negato").
-    chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary config 2>/dev/null || true
+    chown -R \"\${HOST_UID}:\${HOST_GID}\" .build cache chroot binary config dist 2>/dev/null || true
     chown \"\${HOST_UID}:\${HOST_GID}\" ./*.iso 2>/dev/null || true
   " 2>&1 | tee build.log
 RC=${PIPESTATUS[0]}

@@ -27,7 +27,7 @@ Poi ricompila: `sudo make build`.
 
 ```
 config/includes.chroot/etc/hostname
-config/includes.chroot/etc/motd
+branding/rootfs/etc/motd
 ```
 
 ## Sorgenti APT (build e sistema live)
@@ -109,9 +109,9 @@ chmod +x config/includes.chroot/usr/local/bin/mio-script
 
 | Cosa | File |
 |---|---|
-| Logo PNG (512×512) | `config/includes.chroot/usr/share/zinimalos/logo.png` |
-| Logo ASCII per `fastfetch` | `config/includes.chroot/usr/share/zinimalos/logo-ascii.txt` |
-| Riga mostrata prima del login (`/etc/issue`) | `config/includes.chroot/etc/issue` |
+| Logo PNG (512×512) | `branding/rootfs/usr/share/zinimalos/logo.png` |
+| Logo ASCII per `fastfetch` | `branding/rootfs/usr/share/zinimalos/logo-ascii.txt` |
+| Riga mostrata prima del login (`/etc/issue`) | `branding/rootfs/etc/issue` |
 | Anteprima per il README | `docs/images/zinimalos-logo.png` |
 
 Dove compare il logo:
@@ -133,10 +133,10 @@ Per sostituire il logo:
 ```bash
 # PNG (≤ 512×512, pochi colori per non gonfiare l'ISO)
 convert nuovo.png -resize 512x512 -colors 128 -strip \
-  config/includes.chroot/usr/share/zinimalos/logo.png
+  branding/rootfs/usr/share/zinimalos/logo.png
 
 # ASCII: una riga di file = una riga di logo, prefisso $1 per il colore
-$EDITOR config/includes.chroot/usr/share/zinimalos/logo-ascii.txt
+$EDITOR branding/rootfs/usr/share/zinimalos/logo-ascii.txt
 ```
 
 ### File rimossi dal progetto: attenzione
@@ -147,11 +147,16 @@ Per questo c’è `config/hooks/normal/0300-remove-stale-files.hook.chroot`, che
 rimuove i residui noti (vecchio banner `00-*-welcome.sh`, file `livedeb13-*`).
 Se rimuovi altri file, aggiungili a quell’hook oppure ricrea il chroot da zero.
 
+Con l’introduzione del pacchetto `zinimalos-branding` (vedi
+[`docs/UPDATES.md`](UPDATES.md)) il problema riguarda solo i file rimasti in
+`config/includes.chroot/`: logo, `/etc/issue`, MOTD, config fastfetch e script
+`made*` viaggiano dentro il `.deb` e passano da dpkg.
+
 ## Banner fastfetch
 
 `fastfetch` è installato (in `packages.list.chroot` e
 `packages.list.chroot_install`) ma **non viene eseguito all’accesso**: lo lanci
-tu quando vuoi. Configurazione: `config/includes.chroot/etc/fastfetch/config.jsonc`.
+tu quando vuoi. Configurazione: `branding/rootfs/etc/fastfetch/config.jsonc`.
 
 - **logo**: `logo-ascii.txt`, colore bianco;
 - **moduli**: `title`, `os`, `host`, `kernel`, `uptime`, `packages`, `shell`,
@@ -178,7 +183,7 @@ e anche incollata in uno script — non è un alias di shell.
 I valori stampati vengono da un unico file:
 
 ```sh
-# config/includes.chroot/etc/zinimalos-release  →  /etc/zinimalos-release
+# branding/rootfs/etc/zinimalos-release  →  /etc/zinimalos-release
 ZINIMALOS_PROJECT="ZinimalOS"
 ZINIMALOS_CREATOR="AvancerDev"
 ZINIMALOS_URL="https://github.com/AvancerDev/ZinimalOS"

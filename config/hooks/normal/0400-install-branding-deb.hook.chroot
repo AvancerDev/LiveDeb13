@@ -1,0 +1,44 @@
+#!/bin/sh
+# ZinimalOS — installa nel chroot il pacchetto del branding.
+#
+# Il logo, /etc/issue, il MOTD, la configurazione di fastfetch e gli script
+# made / made by / zinimalos-info NON vengono più copiati a mano da
+# config/includes.chroot/: arrivano dal pacchetto .deb costruito da
+# packaging/build-deb.sh (che auto/build esegue prima di ogni build).
+#
+# Perché così: l'ISO contiene esattamente il pacchetto che le altre macchine
+# scaricano con `apt upgrade`, e i file sono tracciati da dpkg (un aggiornamento
+# può quindi sostituirli in modo pulito).
+#
+# Se il .deb non c'è, la build si ferma: un'ISO senza branding sarebbe
+# silenziosamente sbagliata.
+
+set -eu
+
+PKGDIR=/opt/zinimalos/packages
+
+installed=0
+for deb in "$PKGDIR"/*.deb; do
+  [ -f "$deb" ] || continue
+  echo "Installo il pacchetto: $(basename "$deb")"
+  dpkg -i "$deb"
+  installed=1
+done
+
+if [ "$installed" = "0" ]; then
+  echo "ERRORE: nessun .deb in $PKGDIR." >&2
+  echo "        Esegui ./packaging/build-deb.sh (oppure ./auto/build, che lo fa da sé)." >&2
+  exit 1
+fi
+
+# I .deb non devono restare nell'immagine finale
+rm -rf "$PKGDIR"
+
+# Verifica minima: senza questi file l'ISO non è quella giusta
+for f in /etc/issue /etc/motd /etc/zinimalos-release \
+         /etc/fastfetch/config.jsonc /usr/share/zinimalos/logo-ascii.txt \
+         /usr/share/zinimalos/logo.png; do
+  [ -e "$f" ] || { echo "ERRORE: manca $f dopo l'installazione del pacchetto." >&2; exit 1; }
+done
+
+echo "Branding ZinimalOS installato: $(sed -n 's/^ZINIMALOS_VERSION="\(.*\)"/\1/p' /etc/zinimalos-release 2>/dev/null || true)"

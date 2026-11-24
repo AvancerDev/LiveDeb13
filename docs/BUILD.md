@@ -68,7 +68,8 @@ sudo make distclean    # lb clean --purge (cancella anche la cache)
 live-build **salta** ogni stadio che ha già il suo *stage file* in `.build/`
 (nome = nome dello script: `chroot_hooks`, `binary_rootfs`, …) e stampa
 `W: Skipping …, already done`. Di conseguenza una modifica a
-`config/includes.chroot/` (logo, MOTD, `/etc/issue`, config di fastfetch) non
+`branding/rootfs/` (logo, MOTD, `/etc/issue`, config di fastfetch) o
+`config/includes.chroot/` non
 entrerebbe **mai** nell’immagine: la build riesce ma produce un’ISO identica
 alla precedente.
 
@@ -80,6 +81,10 @@ Attenzione: live-build copia `config/includes.chroot/` ma **non cancella** i
 file che rimuovi dal progetto, quindi un file eliminato continua a esistere nel
 chroot (è il caso del vecchio banner che lanciava fastfetch). I residui noti
 sono rimossi da `config/hooks/normal/0300-remove-stale-files.hook.chroot`.
+
+Il caso più frequente è il branding: `branding/rootfs/` viene impacchettato in
+`zinimalos-branding_*.deb` e installato nel chroot dall'hook `0400`, quindi se
+non si rieseguono gli stadi il logo resta quello vecchio.
 
 Se vuoi forzare a mano:
 

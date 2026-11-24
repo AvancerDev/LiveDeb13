@@ -105,17 +105,20 @@ Tutto si modifica senza toccare `auto/config` (che è solo un wrapper di `lb con
 |---|---|
 | Pacchetti live | `config/package-lists/packages.list.chroot` |
 | Pacchetti installati sul target | `config/package-lists/packages.list.chroot_install` |
-| Hostname, MOTD | `config/includes.chroot/etc/` |
+| Hostname / hosts | `config/includes.chroot/etc/` |
+| MOTD, `/etc/issue`, release | `branding/rootfs/etc/` |
 | Sorgenti APT (sicurezza) | `config/archives/zinimalos-security.list` |
 | Utente live, locale | `config/hooks/live/` |
 | Preseed installer | `config/preseed/preseed.cfg` |
 | Script extra | `config/includes.chroot/usr/local/bin/` |
-| Logo (PNG + ASCII) | `config/includes.chroot/usr/share/zinimalos/` |
-| Banner `fastfetch` | `config/includes.chroot/etc/fastfetch/config.jsonc` |
-| Crediti `made by` | `config/includes.chroot/etc/zinimalos-release` |
+| Logo (PNG + ASCII) | `branding/rootfs/usr/share/zinimalos/` |
+| Banner `fastfetch` | `branding/rootfs/etc/fastfetch/config.jsonc` |
+| Crediti `made by` | `branding/rootfs/etc/zinimalos-release` |
+| Aggiornamenti (pacchetto + repo apt) | `packaging/` |
 
 Guida completa: [`docs/CUSTOMIZE.md`](docs/CUSTOMIZE.md) ·
-Build & test: [`docs/BUILD.md`](docs/BUILD.md)
+Build & test: [`docs/BUILD.md`](docs/BUILD.md) ·
+Aggiornamenti (`apt upgrade`): [`docs/UPDATES.md`](docs/UPDATES.md)
 
 ---
 
@@ -127,14 +130,17 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 │   ├── config
 │   ├── build
 │   └── clean
+├── branding/rootfs/       # Contenuto del pacchetto zinimalos-branding
+│   ├── etc/fastfetch/     # configurazione del banner
+│   ├── etc/issue          # riga mostrata prima del login
+│   ├── etc/zinimalos-release      # credito/versione (comando `made by`)
+│   ├── etc/apt/           # repo apt firmato (chiave + .sources)
+│   ├── usr/local/bin/     # made, made-by, zinimalos-info
+│   └── usr/share/zinimalos/  # logo.png + logo-ascii.txt
+├── packaging/             # build-deb.sh, setup-gpg.sh, publish-repo.sh
 ├── config/
 │   ├── package-lists/     # Elenchi pacchetti (.chroot / .chroot_install)
-│   ├── includes.chroot/   # File copiati nel live system
-│   │   ├── etc/fastfetch/          # configurazione del banner
-│   │   ├── etc/issue               # riga mostrata prima del login
-│   │   ├── etc/zinimalos-release   # credito/versione (comando `made by`)
-│   │   ├── usr/local/bin/          # made, made-by, zinimalos-*
-│   │   └── usr/share/zinimalos/    # logo.png + logo-ascii.txt
+│   ├── includes.chroot/   # File copiati nel live system (non pacchettizzati)
 │   ├── includes.binary/   # File copiati nella ISO (bootloader, splash…)
 │   ├── hooks/             # Script chroot/live eseguiti in build
 │   ├── preseed/           # preseed.cfg per Debian Installer
@@ -146,6 +152,28 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 ├── build.sh
 └── README.md
 ```
+
+---
+
+## Aggiornamenti (apt upgrade)
+
+Le personalizzazioni (logo, `/etc/issue`, MOTD, config di fastfetch, script)
+vivono in `branding/rootfs/` e vengono distribuite come **pacchetto .deb**
+`zinimalos-branding`, pubblicato in un repository apt firmato su GitHub Pages.
+
+```bash
+make deb        # costruisce dist/zinimalos-branding_<ver>_all.deb
+make publish    # reprepro: inserisce, firma e pubblica su gh-pages
+
+# sulle macchine ZinimalOS installate
+sudo apt update && sudo apt upgrade
+```
+
+L'ISO installa lo **stesso** pacchetto (viene messo in
+`config/includes.chroot/opt/zinimalos/packages/` e l'hook `0400` lo installa nel
+chroot), quindi ciò che aggiorni con `apt` è identico a ciò che finisce
+nell'immagine. Guida completa:
+[`docs/UPDATES.md`](docs/UPDATES.md).
 
 ---
 
@@ -235,6 +263,11 @@ Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.6.
 Residuo dello stadio `binary` di una build interrotta. Rimedio senza
 riscaricare il chroot: `rm -rf binary && rm -f .build/*binary* && ./build-docker.sh`.
 Dettagli: [`docs/BUILD.md`](docs/BUILD.md) §6.10.
+
+**Devo aggiornare le altre macchine?**
+`sudo apt update && sudo apt upgrade`: il pacchetto `zinimalos-branding` porta
+logo, banner, MOTD e script, Debian porta il resto. Vedi
+[`docs/UPDATES.md`](docs/UPDATES.md).
 
 **Ho modificato `config/` ma la ISO è identica?**
 live-build salta gli stadi già fatti (`W: Skipping …, already done`), quindi le

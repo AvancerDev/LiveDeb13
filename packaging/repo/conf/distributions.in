@@ -1,0 +1,8 @@
+Origin: ZinimalOS
+Label: ZinimalOS
+Suite: trixie
+Codename: trixie
+Architectures: amd64
+Components: main
+Description: ZinimalOS - aggiornamenti di branding e strumenti di sistema
+SignWith: @KEY@
