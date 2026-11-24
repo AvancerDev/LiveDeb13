@@ -110,21 +110,23 @@ chmod +x config/includes.chroot/usr/local/bin/mio-script
 | Cosa | File |
 |---|---|
 | Logo PNG (512×512) | `config/includes.chroot/usr/share/zinimalos/logo.png` |
-| Logo ASCII (per `fastfetch`) | `config/includes.chroot/usr/share/zinimalos/logo-ascii.txt` |
-| Logo piccolo pre-login (`/etc/issue`) | `config/includes.chroot/etc/issue` |
+| Logo ASCII per `fastfetch` | `config/includes.chroot/usr/share/zinimalos/logo-ascii.txt` |
+| Riga mostrata prima del login (`/etc/issue`) | `config/includes.chroot/etc/issue` |
 | Anteprima per il README | `docs/images/zinimalos-logo.png` |
 
 Dove compare il logo:
 
 | Momento | Cosa si vede |
 |---|---|
-| Schermata di login (prima di autenticarsi) | logo ASCII **piccolo**, in alto a sinistra (`/etc/issue`) |
+| Schermata di login (prima di autenticarsi) | **solo una riga di testo** (`/etc/issue`), nessun logo |
 | Dopo il login | **solo il testo** del MOTD (`/etc/motd`) |
-| `fastfetch` lanciato a mano | logo ASCII a sinistra + info di sistema a destra |
+| `fastfetch` lanciato a mano | logo ASCII **bianco** a sinistra + info di sistema a destra |
 
-Il banner di fastfetch **non** viene eseguito automaticamente: all’accesso si
-vede solo il MOTD, senza rallentamenti né output inatteso (utile anche per
-`ssh`, `scp` e sessioni non interattive).
+Il logo ASCII è deliberatamente composto **solo da caratteri ASCII** (`#` e
+`*`): i caratteri a blocchi Unicode (`█ ▄ ▀ ✦`) vengono spesso disegnati male
+dalla console (finiscono in rombi "di sostituzione" se il font non li ha).
+La riga che inizia con `$1` indica a fastfetch il colore del logo: il bianco è
+impostato in `/etc/fastfetch/config.jsonc` con `"color": { "1": "white" }`.
 
 Per sostituire il logo:
 
@@ -133,27 +135,31 @@ Per sostituire il logo:
 convert nuovo.png -resize 512x512 -colors 128 -strip \
   config/includes.chroot/usr/share/zinimalos/logo.png
 
-# ASCII su console (una riga di testo = una riga di logo, max ~32 colonne)
+# ASCII: una riga di file = una riga di logo, prefisso $1 per il colore
 $EDITOR config/includes.chroot/usr/share/zinimalos/logo-ascii.txt
-$EDITOR config/includes.chroot/etc/issue
 ```
+
+### File rimossi dal progetto: attenzione
+
+live-build **copia** `config/includes.chroot/` nel chroot ma **non cancella**
+i file che togli dal progetto: su un chroot già esistente restano per sempre.
+Per questo c’è `config/hooks/normal/0300-remove-stale-files.hook.chroot`, che
+rimuove i residui noti (vecchio banner `00-*-welcome.sh`, file `livedeb13-*`).
+Se rimuovi altri file, aggiungili a quell’hook oppure ricrea il chroot da zero.
 
 ## Banner fastfetch
 
 `fastfetch` è installato (in `packages.list.chroot` e
-`packages.list.chroot_install`) e la sua configurazione è in
-`config/includes.chroot/etc/fastfetch/config.jsonc`:
+`packages.list.chroot_install`) ma **non viene eseguito all’accesso**: lo lanci
+tu quando vuoi. Configurazione: `config/includes.chroot/etc/fastfetch/config.jsonc`.
 
-- **logo**: viene da `/usr/share/zinimalos/logo-ascii.txt`;
+- **logo**: `logo-ascii.txt`, colore bianco;
 - **moduli**: `title`, `os`, `host`, `kernel`, `uptime`, `packages`, `shell`,
   `terminal`, `cpu`, `gpu`, `memory`, `disk`, `localip`, `colors`, più due
   righe custom con nome e crediti.
 
-Per personalizzare i moduli modifica l’array `modules` nel `.jsonc`; elenco
-completo su <https://github.com/fastfetch-cli/fastfetch/wiki/Configuration>.
-
-Per vedere il risultato senza riavviare: `fastfetch`
-(oppure `fastfetch --config /etc/fastfetch/config.jsonc`).
+Per personalizzare i moduli modifica l’array `modules`; elenco completo su
+<https://github.com/fastfetch-cli/fastfetch/wiki/Configuration>.
 
 ## Crediti: comando `made by`
 

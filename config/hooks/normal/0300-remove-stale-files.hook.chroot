@@ -1,0 +1,24 @@
+#!/bin/sh
+# ZinimalOS — pulizia dei file rimasti da versioni precedenti dell'immagine.
+#
+# Perché serve: live-build COPIA config/includes.chroot/ nel chroot, ma non
+# rimuove mai i file che hai cancellato dal progetto. Se lavori su un chroot
+# già esistente (o rinomini un file, come LiveDeb13 → ZinimalOS), i vecchi
+# file continuano a esistere nell'immagine — per esempio il banner che lanciava
+# fastfetch a ogni login.
+#
+# Qui li eliminiamo in modo idempotente.
+
+set -eu
+
+# Banner automatico rimosso (ora fastfetch parte solo su richiesta)
+rm -f /etc/profile.d/00-zinimalos-welcome.sh
+rm -f /etc/profile.d/00-livedeb13-welcome.sh
+
+# File della vecchia identità "livedeb13" rimasti da build precedenti
+rm -f /etc/livedeb13-release
+rm -f /usr/local/bin/livedeb13-info
+rm -f /usr/local/bin/livedeb13-install
+rm -rf /usr/share/livedeb13
+
+echo "Pulizia: rimossi eventuali file residui di versioni precedenti."

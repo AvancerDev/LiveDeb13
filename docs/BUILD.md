@@ -76,6 +76,11 @@ Da questa versione `auto/build` se ne accorge da solo: se un file di`config/`
 è più recente dell’ultima build, rimuove gli stage file di `chroot` e `binary`
 e li riesegue sul chroot esistente (**senza riscaricare pacchetti**).
 
+Attenzione: live-build copia `config/includes.chroot/` ma **non cancella** i
+file che rimuovi dal progetto, quindi un file eliminato continua a esistere nel
+chroot (è il caso del vecchio banner che lanciava fastfetch). I residui noti
+sono rimossi da `config/hooks/normal/0300-remove-stale-files.hook.chroot`.
+
 Se vuoi forzare a mano:
 
 ```bash

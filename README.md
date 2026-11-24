@@ -89,8 +89,8 @@ Oppure con `Ventoy`, `balenaEtcher`, `GNOME Disks`, ecc.
 | Rete | NetworkManager + iwd + wpasupplicant (Wi-Fi e Ethernet) |
 | Firmware | `firmware-linux`, microcode Intel/AMD |
 | Tools | `nano`, `vim-tiny`, `htop`, `tmux`, `curl`, `wget`, `openssh-server`, `mc`, `parted`, `cryptsetup`, `lvm2`, … |
-| Logo | `Z` blu in `usr/share/zinimalos/logo.png`; versione ASCII piccola sulla schermata di login |
-| Banner | `fastfetch` disponibile a mano (`fastfetch`), non eseguito all’accesso |
+| Logo | `Z` blu in `usr/share/zinimalos/logo.png`; versione ASCII in `fastfetch` (bianca) |
+| Banner | `fastfetch` solo su richiesta, mai all’accesso; all’avvio solo il MOTD |
 | Crediti | comando `made by` → creatore (`AvancerDev`) e progetto (`ZinimalOS`) |
 
 Vedi `config/package-lists/` per l’elenco completo e modificabile.
@@ -131,7 +131,7 @@ Build & test: [`docs/BUILD.md`](docs/BUILD.md)
 │   ├── package-lists/     # Elenchi pacchetti (.chroot / .chroot_install)
 │   ├── includes.chroot/   # File copiati nel live system
 │   │   ├── etc/fastfetch/          # configurazione del banner
-│   │   ├── etc/issue               # logo piccolo sulla schermata di login
+│   │   ├── etc/issue               # riga mostrata prima del login
 │   │   ├── etc/zinimalos-release   # credito/versione (comando `made by`)
 │   │   ├── usr/local/bin/          # made, made-by, zinimalos-*
 │   │   └── usr/share/zinimalos/    # logo.png + logo-ascii.txt
