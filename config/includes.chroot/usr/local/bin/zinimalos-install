@@ -1,72 +1,485 @@
-#!/bin/sh
-# ZinimalOS — come installare il sistema su disco.
+#!/bin/bash
+# ZinimalOS — installer (installa il sistema live su disco).
 #
-# Il Debian Installer NON è dentro il sistema live: è un kernel + initrd
-# separati che vivono sull'ISO/USB e si avviano SOLO dal menu di boot
-# (voci «Install» e «Graphical install»). Da dentro la sessione live non esiste
-# un comando per "passare" all'installer: per questo la versione precedente di
-# questo script falliva sempre con "debian-installer non trovato".
+# Sostituisce il vecchio script che si limitava a suggerire il Debian Installer
+# dal menu di avvio: quella strada dipende dallo stadio `lb installer` di
+# live-build, che è fragile (se i file in binary/install/ mancano, la voce del
+# menu resta lì e non fa nulla). Questo installer invece non dipende da nulla
+# che non sia già nella sessione live: copia il sistema live sul disco e
+# installa GRUB.
 #
-# Qui: verifichiamo che i file dell'installer siano davvero sul supporto
-# avviato e spieghiamo i passi esatti. Con --reboot riavvia subito.
+# Uso:
+#   sudo zinimalos-install                 installazione guidata (interattiva)
+#   sudo zinimalos-install --disk /dev/sda installazione su un disco preciso
+#   sudo zinimalos-install --dry-run       mostra cosa farebbe, senza toccare nulla
+#   zinimalos-install --self-test          verifica l'ambiente (usato dalla build)
+#   zinimalos-install --help
+#
+# ATTENZIONE: l'installazione CANCELLA il disco scelto. Non c'è undo.
 
-set -eu
+set -u
 
-MEDIUM=""
-for d in /run/live/medium /lib/live/mount/medium /run/live/medium/live; do
-  if [ -d "$d" ]; then
-    MEDIUM="$d"
-    break
-  fi
-done
+PROG="${0##*/}"
+SQUASH=""
+TARGET=/target
+MODE=""            # uefi | bios
+DISK=""
+ESP_PART=""
+ROOT_PART=""
+ROOT_UUID=""
+ESP_UUID=""
+DRY=0
+ASSUME_YES=0
+NEW_USER=""
+NEW_PASS=""
+HOSTNAME_NEW="zinimalos"
+VERBOSE=0
 
-FOUND=""
-for f in "$MEDIUM/install/vmlinuz" "$MEDIUM/install.amd/vmlinuz" \
-         "$MEDIUM/install/initrd.gz" "$MEDIUM/install.amd/initrd.gz"; do
-  [ -f "$f" ] && FOUND="$FOUND $f"
-done
-
-echo "ZinimalOS - installazione su disco"
-echo
-
-if [ -z "$MEDIUM" ]; then
-  echo "Non sembra una sessione live (nessun supporto montato)."
-  echo "Se il sistema è già installato, non c'è nulla da fare:"
-  echo "  sudo apt update && sudo apt upgrade   # per aggiornarlo"
-  exit 0
-fi
-
-if [ -n "$FOUND" ]; then
-  echo "Installer presente sul supporto ($MEDIUM):"
-  for f in $FOUND; do echo "  $f"; done
+# --- Colori (solo se il terminale li supporta) -------------------------------
+if [ -t 1 ]; then
+  R=$'\033[31m'; G=$'\033[32m'; Y=$'\033[33m'; B=$'\033[1m'; N=$'\033[0m'
 else
-  echo "Installer non trovato sul supporto ($MEDIUM)."
-  echo "Il sistema live non contiene il Debian Installer al suo interno:"
-  echo "è un kernel separato che si avvia solo dal menu di boot dell'ISO."
+  R=""; G=""; Y=""; B=""; N=""
 fi
 
-echo
-echo "Come installare:"
-echo "  1. sudo reboot"
-echo "  2. nel menu di avvio dell'ISO scegli «Install» (testuale)"
-echo "     oppure «Graphical install» (se presente)"
-echo "  3. segui le domande: il preseed di ZinimalOS risponde già a gran parte"
-echo
-echo "Note:"
-echo "  - il sistema installato è una copia del live: stessi pacchetti, logo e MOTD"
-echo "  - utente live: user / live, root: live; nell'installato scegli tu le password"
-echo "  - se il menu non mostra «Install», riavvia in modalità BIOS (legacy) o UEFI"
-echo "    a seconda di come hai preparato il supporto"
-echo
+say()  { printf '%s\n' "$*"; }
+info() { printf '%s==>%s %s\n' "$B" "$N" "$*"; }
+warn() { printf '%sATTENZIONE:%s %s\n' "$Y" "$N" "$*" >&2; }
+die()  { printf '%sERRORE:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 
-case "${1:-}" in
-  --reboot|-r)
-    echo "Riavvio in corso..."
-    exec sudo reboot
-    ;;
-  -h|--help)
-    echo "Uso: zinimalos-install [--reboot]"
-    ;;
+# run: esegue (o stampa, con --dry-run) un comando
+run() {
+  if [ "$DRY" = "1" ]; then
+    printf '  [dry-run] %s\n' "$*"
+    return 0
+  fi
+  [ "$VERBOSE" = "1" ] && printf '  + %s\n' "$*"
+  "$@"
+}
+
+usage() {
+  sed -n '2,20p' "$0" | sed -n 's|^# \{0,1\}||p'
+  cat <<'EOF'
+
+Opzioni:
+  --disk DEV     disco di destinazione (es. /dev/sda, /dev/nvme0n1)
+  --user NOME    nome utente da creare (default: user)
+  --yes          non chiedere conferma (solo con --disk)
+  --dry-run      mostra i passaggi senza eseguirli
+  --self-test    controlla che l'ambiente abbia tutto il necessario
+  --verbose      stampa ogni comando eseguito
+  --help         questo testo
+EOF
+}
+
+# --- Argomenti ---------------------------------------------------------------
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --disk)      DISK="${2:-}"; [ -n "$DISK" ] || die "--disk richiede un dispositivo"; shift 2 ;;
+    --disk=*)    DISK="${1#*=}"; shift ;;
+    --user)      NEW_USER="${2:-}"; [ -n "$NEW_USER" ] || die "--user richiede un nome"; shift 2 ;;
+    --user=*)    NEW_USER="${1#*=}"; shift ;;
+    --yes|-y)    ASSUME_YES=1; shift ;;
+    --dry-run)   DRY=1; shift ;;
+    --verbose|-v) VERBOSE=1; shift ;;
+    --self-test) SELF_TEST=1; shift ;;
+    --help|-h)   usage; exit 0 ;;
+    *)           die "opzione non riconosciuta: $1 (usa --help)" ;;
+  esac
+done
+
+# --- Ambiente ----------------------------------------------------------------
+MISSING=""
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+check_commands() {
+  MISSING=""
+  for c in lsblk blkid mount umount mkfs.ext4 sgdisk partprobe rsync grub-install chroot update-initramfs; do
+    have "$c" || MISSING="$MISSING $c"
+  done
+  # mkfs.vfat: pacchetto dosfstools (mkfs.fat è un alias)
+  have mkfs.vfat || have mkfs.fat || MISSING="$MISSING mkfs.vfat(dosfstools)"
+  # unsquashfs: alternativa se il mount loop non è disponibile
+  have unsquashfs || MISSING="$MISSING unsquashfs(squashfs-tools)"
+}
+
+find_squashfs() {
+  for f in /run/live/medium/live/filesystem.squashfs \
+           /lib/live/mount/medium/live/filesystem.squashfs \
+           /run/live/medium/live/filesystem.squashfs; do
+    [ -f "$f" ] && { SQUASH="$f"; return 0; }
+  done
+  # fallback: cerca nel mount della live
+  f="$(find /run/live /lib/live -maxdepth 4 -name 'filesystem.squashfs' 2>/dev/null | head -n 1)"
+  [ -n "$f" ] && { SQUASH="$f"; return 0; }
+  return 1
+}
+
+detect_mode() {
+  if [ -d /sys/firmware/efi ]; then MODE=uefi; else MODE=bios; fi
+}
+
+# --- Self test (usato anche dall'hook di build) ------------------------------
+if [ "${SELF_TEST:-0}" = "1" ]; then
+  check_commands
+  rc=0
+  if [ -n "$MISSING" ]; then
+    printf '%sERRORE:%s comandi mancanti:%s\n' "$R" "$N" "$MISSING" >&2
+    printf '        pacchetti: dosfstools gdisk squashfs-tools grub-efi-amd64-bin grub-pc-bin rsync\n' >&2
+    rc=1
+  fi
+  detect_mode
+  printf '    ambiente: %s\n' "$MODE"
+  if find_squashfs; then
+    printf '    squashfs: %s (%s)\n' "$SQUASH" "$(du -h "$SQUASH" | cut -f1)"
+  else
+    printf '    squashfs: assente (normale fuori dalla sessione live)\n'
+  fi
+  if [ "$(id -u)" != "0" ]; then
+    printf '    utente: non root (per installare serve sudo)\n'
+  fi
+  [ "$rc" = 0 ] && printf '%sSelf-test installer: OK%s\n' "$G" "$N"
+  exit "$rc"
+fi
+
+# --- Controlli iniziali ------------------------------------------------------
+# --dry-run non tocca nulla: si può usare anche senza root
+[ "$(id -u)" = "0" ] || [ "$DRY" = "1" ] || die "serve root: usa 'sudo $PROG'"
+check_commands
+if [ -n "$MISSING" ]; then
+  die "mancano dei programmi:$MISSING — pacchetti: dosfstools gdisk squashfs-tools grub-efi-amd64-bin grub-pc-bin rsync"
+fi
+
+find_squashfs || die "non trovo il filesystem della live (filesystem.squashfs).
+       Se hai avviato l'installazione da un sistema installato, non serve:
+       '$PROG' funziona solo dalla sessione live."
+detect_mode
+
+# --- Disco di destinazione ---------------------------------------------------
+# Il supporto della live non deve mai essere un candidato.
+live_src="$(findmnt -no SOURCE /run/live/medium 2>/dev/null || findmnt -no SOURCE /lib/live/mount/medium 2>/dev/null || true)"
+live_disk=""
+if [ -n "$live_src" ]; then
+  live_disk="/dev/$(lsblk -no PKNAME "$live_src" 2>/dev/null | head -n 1)"
+  [ "$live_disk" = "/dev/" ] && live_disk=""
+fi
+
+list_disks() {
+  # NAME SIZE TYPE MODEL (il modello può contenere spazi: sta in coda)
+  lsblk -dpno NAME,SIZE,TYPE,MODEL 2>/dev/null | while read -r _n _s _t _m; do
+    [ "$_t" = "disk" ] || continue
+    case "$_n" in
+      /dev/loop*|/dev/zram*|/dev/sr*|/dev/ram*|/dev/dm-*) continue ;;
+    esac
+    printf '%s %s %s\n' "$_n" "$_s" "$_m"
+  done
+}
+
+choose_disk() {
+  info "Dischi disponibili:"
+  mapfile -t DISKS < <(list_disks)
+  [ "${#DISKS[@]}" -gt 0 ] || die "nessun disco trovato"
+  i=0
+  for d in "${DISKS[@]}"; do
+    i=$((i + 1))
+    name="${d%% *}"
+    mark=""
+    [ "$name" = "$live_disk" ] && mark="  ${Y}(supporto della live: non selezionabile)${N}"
+    printf '  %d) %-40s%s\n' "$i" "$d" "$mark"
+  done
+  printf '\nNumero del disco su cui installare (0 = annulla): '
+  read -r n
+  case "$n" in
+    0|"") say "annullato"; exit 0 ;;
+    *[!0-9]*) die "scelta non valida" ;;
+  esac
+  [ "$n" -ge 1 ] && [ "$n" -le "${#DISKS[@]}" ] || die "scelta fuori elenco"
+  DISK="${DISKS[$((n - 1))]%% *}"
+  [ "$DISK" = "$live_disk" ] && die "$DISK è il supporto della live: non posso installarci sopra"
+}
+
+if [ -n "$DISK" ]; then
+  [ -b "$DISK" ] || [ "$DRY" = "1" ] || die "$DISK non è un disco a blocchi"
+  [ "$DISK" = "$live_disk" ] && die "$DISK è il supporto della live"
+else
+  choose_disk
+fi
+
+disk_size="$(lsblk -dno SIZE "$DISK" 2>/dev/null | tr -d ' ')"
+disk_model="$(lsblk -dno MODEL "$DISK" 2>/dev/null | sed 's/[[:space:]]*$//')"
+[ -n "$disk_size" ] || die "non riesco a leggere la dimensione di $DISK"
+
+# Partizioni: nvme0n1/mmcblk0 usano il suffisso "p1", sda/vda no.
+case "$DISK" in
+  *[0-9]) ROOT_PART="${DISK}p2"; ESP_PART="${DISK}p1" ;;
+  *)      ROOT_PART="${DISK}2";  ESP_PART="${DISK}1"  ;;
 esac
 
-echo "Per riavviare subito: zinimalos-install --reboot"
+# --- Riepilogo e conferma ----------------------------------------------------
+say ""
+say "${B}===== Riepilogo =====${N}"
+say "  Disco:        $DISK  ($disk_model, $disk_size)"
+say "  Avvio:        $([ "$MODE" = uefi ] && echo 'UEFI (GRUB x86_64-efi)' || echo 'BIOS/legacy (GRUB i386-pc)')"
+say "  Partizioni:   $ESP_PART ($([ "$MODE" = uefi ] && echo 'EFI 512 MB' || echo 'bios_grub 1 MB'))"
+say "                $ROOT_PART (ext4, tutto lo spazio rimanente)"
+say "  Sistema:      ZinimalOS (copia della sessione live)"
+say "  Hostname:     $HOSTNAME_NEW"
+[ -n "$NEW_USER" ] && say "  Utente:       $NEW_USER"
+say ""
+warn "TUTTI I DATI SU $DISK VERRANNO CANCELLATI, DEFINITIVAMENTE."
+
+if [ "$ASSUME_YES" = "0" ] && [ "$DRY" = "0" ]; then
+  printf 'Scrivi %sCANCELLA%s per procedere (altro per annullare): ' "$B" "$N"
+  read -r answer
+  [ "$answer" = "CANCELLA" ] || { say "annullato, nessuna modifica fatta"; exit 0; }
+fi
+
+if [ "$DRY" = "1" ]; then
+  info "dry-run: nessuna modifica verrà fatta"
+fi
+
+# --- Utente e password -------------------------------------------------------
+if [ "$DRY" = "0" ]; then
+  if [ -z "$NEW_USER" ]; then
+    printf 'Nome utente da usare sul sistema installato [user]: '
+    read -r NEW_USER
+    [ -n "$NEW_USER" ] || NEW_USER=user
+  fi
+  case "$NEW_USER" in
+    [a-z]*) : ;;
+    *) die "il nome utente deve iniziare con una lettera minuscola" ;;
+  esac
+  printf 'Password per %s: ' "$NEW_USER"
+  read -rs NEW_PASS; say ""
+  printf 'Ripeti la password: '
+  read -rs p2; say ""
+  [ "$NEW_PASS" = "$p2" ] || die "le password non coincidono"
+  [ "${#NEW_PASS}" -ge 1 ] || die "password vuota"
+fi
+
+# --- Pulizia in caso di errore ----------------------------------------------
+cleanup() {
+  for m in "$TARGET/boot/efi" "$TARGET/dev/pts" "$TARGET/dev" "$TARGET/proc" "$TARGET/sys" "$TARGET"; do
+    mountpoint -q "$m" 2>/dev/null && umount -R "$m" 2>/dev/null || true
+  done
+}
+trap cleanup EXIT INT TERM
+
+# --- 1. Partizionamento ------------------------------------------------------
+info "1/7 Partiziono $DISK (tabella GPT)"
+run sgdisk --zap-all "$DISK" || die "sgdisk --zap-all fallito"
+if [ "$MODE" = "uefi" ]; then
+  run sgdisk -n "1:0:+512M" -t 1:ef00 -c 1:ZinimalOS_ESP "$DISK" || die "creazione partizione EFI fallita"
+else
+  run sgdisk -n "1:0:+1M"   -t 1:ef02 -c 1:ZinimalOS_BIOS "$DISK" || die "creazione partizione bios_grub fallita"
+fi
+run sgdisk -n "2:0:0" -t 2:8300 -c 2:ZinimalOS_root "$DISK" || die "creazione partizione root fallita"
+run partprobe "$DISK" 2>/dev/null || true
+
+# il kernel deve vedere le nuove partizioni prima di formattarle
+if [ "$DRY" = "0" ]; then
+  have udevadm && udevadm settle 2>/dev/null || true
+  n=0
+  while [ ! -b "$ROOT_PART" ] && [ "$n" -lt 15 ]; do sleep 1; n=$((n + 1)); done
+  [ -b "$ROOT_PART" ] || die "le partizioni non compaiono ($ROOT_PART)"
+  [ -b "$ESP_PART" ]  || die "le partizioni non compaiono ($ESP_PART)"
+fi
+
+# --- 2. Formattazione --------------------------------------------------------
+info "2/7 Formatto le partizioni"
+if [ "$MODE" = "uefi" ]; then
+  MKFAT="$(have mkfs.vfat && echo mkfs.vfat || echo mkfs.fat)"
+  run "$MKFAT" -F 32 -n ZBOOT "$ESP_PART" || die "formattazione EFI fallita"
+fi
+run mkfs.ext4 -F -L ZinimalOS "$ROOT_PART" || die "formattazione root fallita"
+
+# --- 3. Mount ----------------------------------------------------------------
+info "3/7 Monto il nuovo sistema in $TARGET"
+run mkdir -p "$TARGET"
+run mount "$ROOT_PART" "$TARGET" || die "mount di $ROOT_PART fallito"
+if [ "$MODE" = "uefi" ]; then
+  run mkdir -p "$TARGET/boot/efi"
+  run mount "$ESP_PART" "$TARGET/boot/efi" || die "mount della partizione EFI fallito"
+fi
+
+# --- 4. Copia del sistema ----------------------------------------------------
+info "4/7 Copio il sistema (qualche minuto, non interrompere)"
+copied=0
+if [ "$DRY" = "0" ]; then
+  run mkdir -p /mnt/zinimalos-squashfs
+  if run mount -o loop,ro "$SQUASH" /mnt/zinimalos-squashfs 2>/dev/null; then
+    run rsync -aHAX --numeric-ids --info=progress2 \
+        /mnt/zinimalos-squashfs/ "$TARGET/" || die "copia del sistema fallita"
+    run umount /mnt/zinimalos-squashfs || true
+    copied=1
+  else
+    warn "mount loop non disponibile: uso unsquashfs"
+  fi
+  if [ "$copied" = "0" ]; then
+    run unsquashfs -f -d "$TARGET" "$SQUASH" || die "unsquashfs fallito"
+  fi
+  # directory che devono esistere anche se vuote
+  run mkdir -p "$TARGET"/{proc,sys,dev,run,tmp,boot/efi,home}
+  run chmod 1777 "$TARGET/tmp"
+else
+  printf '  [dry-run] mount -o loop,ro %s /mnt/zinimalos-squashfs\n' "$SQUASH"
+  printf '  [dry-run] rsync -aHAX --numeric-ids /mnt/zinimalos-squashfs/ %s/\n' "$TARGET"
+fi
+
+# --- 5. Configurazione del sistema copiato ----------------------------------
+info "5/7 Configuro il sistema (fstab, hostname, utente, avvio)"
+if [ "$DRY" = "0" ]; then
+  ROOT_UUID="$(blkid -s UUID -o value "$ROOT_PART")"
+  [ -n "$ROOT_UUID" ] || die "non riesco a leggere l'UUID di $ROOT_PART"
+  if [ "$MODE" = "uefi" ]; then
+    ESP_UUID="$(blkid -s UUID -o value "$ESP_PART")"
+    [ -n "$ESP_UUID" ] || die "non riesco a leggere l'UUID di $ESP_PART"
+  fi
+
+  {
+    say "# /etc/fstab — generato da zinimalos-install"
+    say "# <file system>                            <mount point> <type> <options>            <dump> <pass>"
+    printf 'UUID=%-38s /             ext4   errors=remount-ro 0      1\n' "$ROOT_UUID"
+    if [ "$MODE" = "uefi" ]; then
+      printf 'UUID=%-38s /boot/efi     vfat   umask=0077        0      1\n' "$ESP_UUID"
+    fi
+    say "tmpfs                                     /tmp          tmpfs  defaults,nosuid    0      0"
+  } > "$TARGET/etc/fstab"
+
+  printf '%s\n' "$HOSTNAME_NEW" > "$TARGET/etc/hostname"
+  cat > "$TARGET/etc/hosts" <<EOF
+127.0.0.1	localhost
+127.0.1.1	$HOSTNAME_NEW
+
+::1		localhost ip6-localhost ip6-loopback
+ff02::1		ip6-allnodes
+ff02::2		ip6-allrouters
+EOF
+
+  # Il sistema installato non deve avere autologin né sudo senza password.
+  rm -rf "$TARGET/etc/systemd/system/getty@tty1.service.d"
+  rm -f "$TARGET/etc/sudoers.d/010-user-nopasswd"
+
+  # macchina "nuova": niente machine-id/chiavi ssh prese dalla live
+  rm -f "$TARGET/etc/machine-id" "$TARGET/var/lib/dbus/machine-id"
+  rm -f "$TARGET"/etc/ssh/ssh_host_*
+  : > "$TARGET/etc/machine-id"
+
+  # Utente
+  if [ "$NEW_USER" != "user" ] && [ -d "$TARGET/home/user" ]; then
+    run sed -i "s/^user:/${NEW_USER}:/" "$TARGET/etc/passwd"
+    run sed -i "s/^user:/${NEW_USER}:/" "$TARGET/etc/shadow"
+    run sed -i "s/^user:/${NEW_USER}:/" "$TARGET/etc/group"
+    run sed -i "s/^user:/${NEW_USER}:/" "$TARGET/etc/gshadow" 2>/dev/null || true
+    run sed -i "s|/home/user|/home/${NEW_USER}|" "$TARGET/etc/passwd"
+    run mv "$TARGET/home/user" "$TARGET/home/${NEW_USER}"
+    run chown -R "${NEW_USER}:" "$TARGET/home/${NEW_USER}"
+  fi
+
+  # Mount per il chroot
+  for m in dev proc sys; do
+    run mount --bind "/$m" "$TARGET/$m" || die "bind mount di /$m fallito"
+  done
+  run mount --bind /dev/pts "$TARGET/dev/pts" 2>/dev/null || true
+
+  # Password (dentro il chroot: usa lo shadow del sistema installato).
+  # Non passa da run(): con --verbose stamperebbe la password nei log.
+  printf '%s:%s\n' "$NEW_USER" "$NEW_PASS" | chroot "$TARGET" chpasswd \
+    || die "impostazione della password fallita"
+  run chroot "$TARGET" passwd -l root >/dev/null 2>&1 || true
+
+  # L'utente deve stare nei gruppi giusti (sudo, adm) sul sistema installato
+  run chroot "$TARGET" usermod -aG sudo,adm "$NEW_USER" 2>/dev/null || true
+
+  # La live non si aggiorna; il sistema installato sì: il pacchetto di branding
+  # contiene il repo apt e il servizio che lo abilita quando non è live.
+  run chroot "$TARGET" systemctl enable zinimalos-repo.service >/dev/null 2>&1 || true
+
+  # initramfs: quello della live funzionerebbe, ma è più pulito rigenerarlo
+  # senza i componenti live-boot (che senza boot=live comunque non fanno nulla).
+  run chroot "$TARGET" env DEBIAN_FRONTEND=noninteractive \
+      apt-get purge -y live-boot live-boot-initramfs-tools live-config \
+      live-config-systemd live-tools >/dev/null 2>&1 || \
+    warn "purge dei pacchetti live non riuscito (non bloccante)"
+  run chroot "$TARGET" update-initramfs -u -k all >/dev/null 2>&1 || \
+    warn "update-initramfs non riuscito (non bloccante)"
+
+  for m in dev/pts dev proc sys; do
+    mountpoint -q "$TARGET/$m" && umount "$TARGET/$m" 2>/dev/null || true
+  done
+fi
+
+# --- 6. Bootloader -----------------------------------------------------------
+info "6/7 Installo GRUB ($MODE)"
+if [ "$DRY" = "0" ]; then
+  if [ "$MODE" = "uefi" ]; then
+    # --removable mette anche EFI/BOOT/BOOTX64.EFI: si avvia pure se il firmware
+    # non registra la voce NVRAM (VM, schede che ignorano BootOrder).
+    run grub-install --target=x86_64-efi --efi-directory="$TARGET/boot/efi" \
+        --boot-directory="$TARGET/boot" --removable --no-nvram --recheck \
+      || die "grub-install (UEFI) fallito"
+    part_disk="${DISK##*/}"
+    run efibootmgr -c -d "$DISK" -p 1 -L "ZinimalOS" \
+        -l '\EFI\BOOT\BOOTX64.EFI' 2>/dev/null || true
+    : "$part_disk"
+  else
+    run grub-install --target=i386-pc --boot-directory="$TARGET/boot" \
+        --recheck "$DISK" || die "grub-install (BIOS) fallito"
+  fi
+
+  # grub.cfg minimale e autosufficiente: nessun bisogno di update-grub
+  KV="$(ls -1 "$TARGET"/boot/vmlinuz-* 2>/dev/null | sed 's|.*/vmlinuz-||' | sort -V | tail -n 1)"
+  [ -n "$KV" ] || die "nel sistema copiato non c'è un kernel in /boot"
+  KI="$(ls -1 "$TARGET/boot/initrd.img-$KV" 2>/dev/null || true)"
+  [ -n "$KI" ] || KI="$(ls -1 "$TARGET"/boot/initrd.img-* 2>/dev/null | sort -V | tail -n 1)"
+
+  cat > "$TARGET/boot/grub/grub.cfg" <<EOF
+# GRUB — generato da zinimalos-install
+set default=0
+set timeout=5
+
+menuentry 'ZinimalOS' {
+    insmod part_gpt
+    insmod ext2
+    search --no-floppy --fs-uuid --set=root $ROOT_UUID
+    linux /boot/vmlinuz-$KV root=UUID=$ROOT_UUID ro quiet
+    initrd /boot/${KI##*/}
+}
+
+menuentry 'ZinimalOS (ripristino)' {
+    insmod part_gpt
+    insmod ext2
+    search --no-floppy --fs-uuid --set=root $ROOT_UUID
+    linux /boot/vmlinuz-$KV root=UUID=$ROOT_UUID ro single
+    initrd /boot/${KI##*/}
+}
+EOF
+
+  # Con --removable GRUB cerca la configurazione dentro l'ESP
+  # (/EFI/BOOT/grub.cfg): va scritta anche lì, altrimenti all'avvio compare
+  # solo il prompt "grub>". Con search --fs-uuid il file funziona da entrambe
+  # le posizioni.
+  if [ "$MODE" = "uefi" ] && [ -d "$TARGET/boot/efi/EFI/BOOT" ]; then
+    run cp "$TARGET/boot/grub/grub.cfg" "$TARGET/boot/efi/EFI/BOOT/grub.cfg"
+  fi
+  if [ "$MODE" = "bios" ]; then
+    run cp "$TARGET/boot/grub/grub.cfg" "$TARGET/boot/grub/grub.cfg.bak"
+  fi
+fi
+
+# --- 7. Chiusura -------------------------------------------------------------
+info "7/7 Smonto tutto"
+run sync
+if [ "$MODE" = "uefi" ]; then run umount "$TARGET/boot/efi" 2>/dev/null || true; fi
+run umount "$TARGET" || die "umount di $TARGET fallito"
+trap - EXIT INT TERM
+
+say ""
+say "${G}===== Installazione completata =====${N}"
+say "  Sistema:  ZinimalOS su $ROOT_PART ($DISK)"
+say "  Avvio:    $([ "$MODE" = uefi ] && echo 'UEFI' || echo 'BIOS') — GRUB installato"
+say "  Utente:   ${NEW_USER:-user}"
+say ""
+say "Rimuovi la chiavetta/ISO e riavvia:  reboot"
+say "Al primo avvio: sudo apt update && sudo apt upgrade"

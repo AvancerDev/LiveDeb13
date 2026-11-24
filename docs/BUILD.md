@@ -739,20 +739,56 @@ rm -f .build/chroot_* .build/binary*
 Se hai toccato i file a mano e vuoi la certezza assoluta:
 `sudo chown -R 0:0 chroot cache` (l'hook rimetterà comunque a posto i setuid).
 
-### 6.14 `zinimalos-install` dice "debian-installer non trovato"
+### 6.14 Installazione su disco: `sudo zinimalos-install`
 
-Non è un errore di configurazione: **il Debian Installer non è dentro il sistema
-live**. È un kernel + initrd separati sull'ISO/USB, che si avviano solo dal menu
-di boot (voci *Install* / *Graphical install*). Da dentro la sessione live non
-esiste un comando per passare all'installer, quindi la versione precedente dello
-script falliva sempre.
+L'installazione **non passa più dal Debian Installer** del menu di avvio. Quel
+percorso dipende dallo stadio `lb installer` di live-build: se i file in
+`binary/install/` non ci sono (o arrivano troncati), la voce *Start installer*
+resta nel menu e al boot non fa nulla, senza spiegare il perché. In più il d-i
+è un sistema a sé: preseed, udeb, rete, un altro mondo da mantenere.
 
-Ora `zinimalos-install`:
+`zinimalos-install` (in `/usr/local/bin`, dentro la live) installa **la live
+stessa** sul disco:
 
-- verifica che i file dell'installer siano presenti sul supporto montato
-  (`/run/live/medium/install/vmlinuz`, `initrd.gz`, …);
-- spiega i passi (riavvio → voce *Install*);
-- con `zinimalos-install --reboot` riavvia subito.
+```
+sudo zinimalos-install                 # guidato: chiede il disco, poi "CANCELLA"
+sudo zinimalos-install --dry-run       # mostra i passi, non tocca nulla
+sudo zinimalos-install --disk /dev/sda --yes --user mario
+zinimalos-install --self-test          # controllo ambiente (lo usa la build)
+```
+
+Cosa fa, nell'ordine:
+
+1. elenca i dischi (`lsblk`), **esclude** il supporto da cui è partita la live e
+   chiede conferma scritta (`CANCELLA`): non c'è undo;
+2. partiziona in GPT: partizione EFI da 512 MB (o `bios_grub` da 1 MB su
+   BIOS/legacy) + root ext4 con tutto lo spazio restante;
+3. formatta e monta in `/target`;
+4. copia il sistema (`mount -o loop` del `filesystem.squashfs` + `rsync -aHAX`,
+   con `unsquashfs` come alternativa);
+5. configura il sistema copiato: `/etc/fstab` con UUID, hostname, `/etc/hosts`,
+   rimozione di autologin e sudo-senza-password, `machine-id` e chiavi SSH
+   rigenerati al primo avvio, utente (nome e password), purge dei pacchetti
+   `live-*`, `update-initramfs`;
+6. installa GRUB: UEFI `--target=x86_64-efi --removable` (funziona anche se il
+   firmware non registra la voce NVRAM) con `grub.cfg` anche in
+   `EFI/BOOT/grub.cfg`; BIOS `--target=i386-pc` nel MBR + partizione
+   `bios_grub`;
+7. smonta tutto e invita al `reboot`.
+
+Non serve rete, non serve il d-i, non serve il menu di avvio: **tutto quello che
+serve è già nella sessione live**. I pacchetti necessari (`squashfs-tools`,
+`dosfstools`, `gdisk`, `grub-efi-amd64-bin`, `grub-pc-bin`, `rsync`) sono in
+`config/package-lists/packages.list.chroot`; l'hook
+`config/hooks/normal/0460-verify-installer-tools.hook.chroot` esegue
+`zinimalos-install --self-test` dentro il chroot e **ferma la build** se ne
+manca uno, invece di fartelo scoprire davanti al disco da cancellare.
+
+Riga attesa nel log:
+
+```
+Self-test installer: OK
+```
 
 ### 6.15 "Start installer" nel menu di avvio non fa nulla
 

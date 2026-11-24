@@ -1,0 +1,26 @@
+#!/bin/sh
+# ZinimalOS — l'installer deve poter funzionare nella live.
+#
+# `zinimalos-install` copia la live sul disco e installa GRUB usando solo
+# programmi presenti nel sistema: se ne manca uno, l'utente lo scopre solo dopo
+# aver avviato la chiavetta e aver scelto il disco da cancellare. Qui la build
+# lo scopre prima.
+#
+# Pacchetti che forniscono i comandi controllati:
+#   dosfstools (mkfs.vfat)  gdisk (sgdisk)  squashfs-tools (unsquashfs)
+#   grub-efi-amd64-bin/grub-pc-bin (grub-install)  rsync  e2fsprogs (mkfs.ext4)
+
+set -eu
+
+Z=/usr/local/bin/zinimalos-install
+
+if [ ! -x "$Z" ]; then
+  echo "ERRORE: manca $Z (l'installer non sarebbe disponibile nella live)" >&2
+  exit 1
+fi
+
+if ! "$Z" --self-test; then
+  echo "VERIFICA FALLITA: l'installer non ha tutto il necessario nella live." >&2
+  echo "                 Aggiungi i pacchetti mancanti a config/package-lists/." >&2
+  exit 1
+fi
