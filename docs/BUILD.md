@@ -545,6 +545,43 @@ Da questa versione `./build-docker.sh` rimuove da sé `binary/` e i suoi stage
 file **quando una build fallisce**, così la successiva riparte pulita su quello
 stadio senza errori da residui.
 
+### 6.11 `trying to overwrite '/etc/issue', which is also in package base-files`
+
+```
+P: Executing hook config/hooks/normal/0400-install-branding-deb.hook.chroot...
+dpkg: error processing archive /opt/zinimalos/packages/zinimalos-branding_....deb (--install):
+ trying to overwrite '/etc/issue', which is also in package base-files (13.8+deb13u8)
+E: config/hooks/normal/0400-install-branding-deb.hook.chroot failed (exit non-zero)
+```
+
+`/etc/issue` **appartiene al pacchetto `base-files`** di Debian: nessun altro
+pacchetto può dichiararlo come proprio (dpkg lo rifiuta, ed è giusto così).
+
+Dal commit che ha introdotto il pacchetto di branding la struttura è:
+
+| File | Chi lo possiede |
+|---|---|
+| `/usr/share/zinimalos/issue`, `/usr/share/zinimalos/motd` | `zinimalos-branding` (template) |
+| `/etc/issue`, `/etc/motd` | applicati dal `postinst` del pacchetto |
+
+Il `postinst` copia i template e salva il checksum in `/var/lib/zinimalos/`:
+se hai modificato `/etc/issue` a mano, l'upgrade non lo sovrascrive (stampa un
+avviso). Per ripristinare la versione ufficiale:
+
+```bash
+sudo rm /etc/issue && sudo apt install --reinstall zinimalos-branding
+```
+
+Se ti capita questo errore con una versione **vecchia** del pacchetto, la build
+è morta a metà e il chroot ha il pacchetto in stato inconsistente. L'hook
+`0400` ora lo ripulisce da sé (`dpkg --purge --force-all` se lo stato non è
+`install ok installed`); se vuoi essere sicuro, riesegui gli stadi del chroot:
+
+```bash
+rm -f .build/chroot_* .build/binary*
+./build-docker.sh
+```
+
 ## 7. Build in CI
 
 Il workflow `.github/workflows/build.yml` compila l’ISO su `debian:trixie`

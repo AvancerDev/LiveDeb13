@@ -106,7 +106,8 @@ Tutto si modifica senza toccare `auto/config` (che è solo un wrapper di `lb con
 | Pacchetti live | `config/package-lists/packages.list.chroot` |
 | Pacchetti installati sul target | `config/package-lists/packages.list.chroot_install` |
 | Hostname / hosts | `config/includes.chroot/etc/` |
-| MOTD, `/etc/issue`, release | `branding/rootfs/etc/` |
+| MOTD, `/etc/issue` (template) | `branding/rootfs/usr/share/zinimalos/{motd,issue}` |
+| Metadati di release | `branding/rootfs/etc/zinimalos-release` |
 | Sorgenti APT (sicurezza) | `config/archives/zinimalos-security.list` |
 | Utente live, locale | `config/hooks/live/` |
 | Preseed installer | `config/preseed/preseed.cfg` |

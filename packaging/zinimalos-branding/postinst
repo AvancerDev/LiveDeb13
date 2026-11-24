@@ -1,0 +1,47 @@
+#!/bin/sh
+# ZinimalOS — applica i template di /etc/issue e /etc/motd.
+#
+# Perché non li spediamo direttamente nel pacchetto: /etc/issue appartiene al
+# pacchetto base-files di Debian, e dpkg rifiuta l'installazione con
+#   trying to overwrite '/etc/issue', which is also in package base-files
+# Quindi il pacchetto installa i template in /usr/share/zinimalos/ e li copia
+# qui, lasciando a base-files la proprietà formale dei file in /etc.
+#
+# Se modifichi /etc/issue o /etc/motd a mano, l'upgrade NON li sovrascrive:
+# il checksum salvato in /var/lib/zinimalos/ lo rileva. Per tornare al
+# contenuto ufficiale:
+#   sudo rm /etc/issue && sudo apt install --reinstall zinimalos-branding
+
+set -e
+
+STATE_DIR=/var/lib/zinimalos
+
+apply_branding_file() {
+  _src="$1"
+  _dst="$2"
+  _state="$STATE_DIR/$(basename "$_dst").md5"
+
+  [ -f "$_src" ] || return 0
+
+  if [ -f "$_dst" ] && [ -f "$_state" ] &&
+     [ "$(md5sum < "$_dst" | cut -d' ' -f1)" != "$(cat "$_state" 2>/dev/null)" ]; then
+    echo "zinimalos-branding: $_dst modificato a mano, lo lascio com'è." >&2
+    echo "                    per ripristinare quello ufficiale:" >&2
+    echo "                    sudo rm $_dst && sudo apt install --reinstall zinimalos-branding" >&2
+    return 0
+  fi
+
+  cp -f "$_src" "$_dst"
+  mkdir -p "$STATE_DIR"
+  md5sum < "$_dst" | cut -d' ' -f1 > "$_state"
+}
+
+case "$1" in
+  configure)
+    mkdir -p "$STATE_DIR"
+    apply_branding_file /usr/share/zinimalos/issue /etc/issue
+    apply_branding_file /usr/share/zinimalos/motd  /etc/motd
+    ;;
+esac
+
+exit 0

@@ -135,21 +135,37 @@ minuti senza riscaricare pacchetti.
 
 ## 4. File di configurazione modificati a mano
 
-`/etc/issue`, `/etc/motd`, `/etc/zinimalos-release` e
-`/etc/fastfetch/config.jsonc` sono **conffile** di dpkg: se li modifichi, dpkg
-lo sa. Per non bloccare mai un upgrade non interattivo, il pacchetto installa
+Due meccanismi diversi, per un motivo preciso:
+
+**Conffile di dpkg** — `/etc/zinimalos-release`, `/etc/fastfetch/config.jsonc`.
+Se li modifichi, dpkg lo sa e in caso di conflitto il pacchetto installa
 `/etc/apt/apt.conf.d/90-zinimalos` con:
 
 ```
 Dpkg::Options { "--force-confdef"; "--force-confold"; };
 ```
 
-Quindi in caso di conflitto **vince la tua versione**: l'upgrade prosegue e il
-logo ufficiale nuovo non viene applicato a quel file.
+quindi **vince la tua versione** e l'upgrade non si blocca mai in attesa di una
+risposta (che in un `apt upgrade` non interattivo farebbe fallire tutto).
 
-Per riallinearti alla versione ufficiale:
+**Template applicati dal `postinst`** — `/etc/issue` e `/etc/motd`. Questi due
+file appartengono a `base-files` di Debian: nessun altro pacchetto può
+dichiararli propri, altrimenti dpkg rifiuta l'installazione con
+
+```
+trying to overwrite '/etc/issue', which is also in package base-files
+```
+
+Perciò il pacchetto contiene `/usr/share/zinimalos/issue` e
+`/usr/share/zinimalos/motd` e li copia al posto giusto, salvando il checksum in
+`/var/lib/zinimalos/`. Se il file su disco **non** corrisponde a quello che il
+pacchetto aveva scritto, significa che l'hai modificato tu e **non viene
+toccato** (il postinst stampa un avviso).
+
+Per riallinearti alle versioni ufficiali:
 
 ```bash
+sudo rm /etc/issue /etc/motd
 sudo apt install --reinstall zinimalos-branding
 ```
 

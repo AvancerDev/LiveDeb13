@@ -69,14 +69,27 @@ fi
 
 # --- DEBIAN/ -----------------------------------------------------------------
 mkdir -p "$STAGE/DEBIAN"
+
+# Script di manutenzione: /etc/issue e /etc/motd NON sono nel pacchetto (sono di
+# base-files, dpkg rifiuterebbe la sovrascrittura): il postinst copia i template
+# da /usr/share/zinimalos/. Vedi packaging/zinimalos-branding/postinst.
+for _s in postinst postrm; do
+  if [ -f "packaging/zinimalos-branding/$_s" ]; then
+    cp "packaging/zinimalos-branding/$_s" "$STAGE/DEBIAN/$_s"
+    chmod 0755 "$STAGE/DEBIAN/$_s"
+  fi
+done
 INSTALLED_SIZE=$(du -sk "$STAGE" | cut -f1)
 sed -e "s|@PKG@|$PKG|g" \
     -e "s|@VERSION@|$VERSION|g" \
     -e "s|@INSTALLED_SIZE@|$INSTALLED_SIZE|g" \
     packaging/zinimalos-branding/control.in > "$STAGE/DEBIAN/control"
 
+# conffile: file che l'utente può modificare e che dpkg non sovrascrive senza
+# chiedere. /etc/issue e /etc/motd sono esclusi di proposito (appartengono a
+# base-files): li gestisce il postinst.
 : > "$STAGE/DEBIAN/conffiles"
-for f in /etc/issue /etc/motd /etc/zinimalos-release /etc/fastfetch/config.jsonc; do
+for f in /etc/zinimalos-release /etc/fastfetch/config.jsonc; do
   [ -f "$STAGE$f" ] && printf '%s\n' "$f" >> "$STAGE/DEBIAN/conffiles"
 done
 

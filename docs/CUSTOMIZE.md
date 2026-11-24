@@ -27,7 +27,7 @@ Poi ricompila: `sudo make build`.
 
 ```
 config/includes.chroot/etc/hostname
-branding/rootfs/etc/motd
+branding/rootfs/usr/share/zinimalos/motd   # template → /etc/motd (postinst)
 ```
 
 ## Sorgenti APT (build e sistema live)
@@ -111,8 +111,13 @@ chmod +x config/includes.chroot/usr/local/bin/mio-script
 |---|---|
 | Logo PNG (512×512) | `branding/rootfs/usr/share/zinimalos/logo.png` |
 | Logo ASCII per `fastfetch` | `branding/rootfs/usr/share/zinimalos/logo-ascii.txt` |
-| Riga mostrata prima del login (`/etc/issue`) | `branding/rootfs/etc/issue` |
+| Riga mostrata prima del login (`/etc/issue`) | `branding/rootfs/usr/share/zinimalos/issue` |
 | Anteprima per il README | `docs/images/zinimalos-logo.png` |
+
+`issue` e `motd` sono **template**: il `postinst` del pacchetto li copia in
+`/etc/issue` e `/etc/motd` (quei file appartengono a `base-files`, il pacchetto
+non può dichiararli propri). Se li modifichi a mano l'upgrade non li
+sovrascrive.
 
 Dove compare il logo:
 

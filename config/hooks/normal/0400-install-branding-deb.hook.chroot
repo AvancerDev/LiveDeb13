@@ -17,6 +17,19 @@ set -eu
 
 PKGDIR=/opt/zinimalos/packages
 
+# Se una build precedente è morta a metà (per esempio per un conflitto su
+# /etc/issue), dpkg può avere il pacchetto in stato inconsistente: qualunque
+# tentativo successivo fallirebbe con "package is in a very bad inconsistent
+# state". Lo ripuliamo prima di reinstallarlo.
+_status="$(dpkg-query -W -f='${Status}' zinimalos-branding 2>/dev/null || true)"
+case "$_status" in
+  ""|"install ok installed") : ;;
+  *)
+    echo "Stato dpkg incoerente per zinimalos-branding ($_status): lo ripulisco."
+    dpkg --purge --force-all zinimalos-branding >/dev/null 2>&1 || true
+    ;;
+esac
+
 installed=0
 for deb in "$PKGDIR"/*.deb; do
   [ -f "$deb" ] || continue

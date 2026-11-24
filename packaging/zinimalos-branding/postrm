@@ -1,0 +1,16 @@
+#!/bin/sh
+# ZinimalOS — pulizia alla rimozione del pacchetto.
+#
+# /etc/issue e /etc/motd non vengono rimossi: appartengono a base-files e li
+# abbiamo solo sovrascritti. Restano quindi, come è giusto che sia (sono i
+# file di sistema), ma cancelliamo lo stato che traccia le nostre copie.
+
+set -e
+
+case "$1" in
+  purge)
+    rm -rf /var/lib/zinimalos
+    ;;
+esac
+
+exit 0
